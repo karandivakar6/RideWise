@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Logo from './Logo';
 
 export default function Auth({ onLoginSuccess }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -22,6 +23,7 @@ export default function Auth({ onLoginSuccess }) {
 
       if (res.ok) {
         localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
         onLoginSuccess(data.user);
       } else {
         setError(data.msg || 'Authentication failed');
@@ -34,15 +36,22 @@ export default function Auth({ onLoginSuccess }) {
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 p-8 rounded-[32px] shadow-2xl w-full max-w-md mx-auto animate-in fade-in zoom-in duration-500">
-      <div className="text-center mb-10">
-        <h2 className="text-3xl font-black italic tracking-tighter uppercase">
-          {isLogin ? 'Sign In' : 'Create Account'}
-        </h2>
-        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] mt-2">
-          {isLogin ? 'Welcome back to RideWise' : 'Join the Bengaluru Aggregator'}
-        </p>
+    <div className="w-full max-w-md mx-auto space-y-8 animate-in fade-in zoom-in duration-500">
+      {/* Logo */}
+      <div className="flex justify-center">
+        <Logo darkMode={true} size="large" showTagline={true} />
       </div>
+
+      {/* Auth Form */}
+      <div className="bg-slate-900 border border-slate-800 p-8 rounded-[32px] shadow-2xl">
+        <div className="text-center mb-10">
+          <h2 className="text-3xl font-black italic tracking-tighter uppercase">
+            {isLogin ? 'Sign In' : 'Create Account'}
+          </h2>
+          <p className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] mt-2">
+            {isLogin ? 'Welcome back' : 'Join the Aggregator'}
+          </p>
+        </div>
 
       {error && (
         <div className="bg-red-500/10 border border-red-500/40 text-red-500 text-[10px] font-bold p-4 rounded-2xl mb-6 text-center uppercase tracking-widest">
@@ -90,6 +99,7 @@ export default function Auth({ onLoginSuccess }) {
         >
           {isLogin ? "New to RideWise? Register here" : "Already have an account? Log in"}
         </button>
+      </div>
       </div>
     </div>
   );
