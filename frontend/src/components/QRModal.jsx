@@ -49,29 +49,29 @@ export default function QRModal({ service, onClose, darkMode, pickup, dropoff, l
   const buttonLink = generateButtonLink(); // For button
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[10000] p-4 animate-in fade-in zoom-in-95 duration-200">
-      <div className={`relative w-full max-w-md rounded-[32px] p-8 shadow-2xl ${
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[10000] p-2 sm:p-4 animate-in fade-in zoom-in-95 duration-200">
+      <div className={`relative w-full max-w-md max-h-[95vh] overflow-y-auto rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 shadow-2xl ${
         darkMode ? 'bg-slate-900 border border-slate-800' : 'bg-white border border-slate-200'
       }`}>
         {/* Close Button */}
         <button
           onClick={onClose}
-          className={`absolute top-6 right-6 p-2 rounded-full transition-all ${
+          className={`absolute top-3 right-3 sm:top-4 sm:right-4 md:top-6 md:right-6 p-1.5 sm:p-2 rounded-full transition-all ${
             darkMode ? 'hover:bg-slate-800' : 'hover:bg-slate-100'
           }`}
         >
-          <X size={20} className={darkMode ? 'text-slate-400' : 'text-slate-600'} />
+          <X size={18} className={darkMode ? 'text-slate-400' : 'text-slate-600'} />
         </button>
 
         {/* Header */}
-        <div className="text-center mb-6">
-          <div className={`inline-flex items-center justify-center w-16 h-16 ${service.brand} rounded-2xl mb-4 shadow-lg`}>
-            <span className="text-2xl font-black text-white">{service.name[0]}</span>
+        <div className="text-center mb-4 sm:mb-6">
+          <div className={`inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ${service.brand} rounded-xl sm:rounded-2xl mb-3 sm:mb-4 shadow-lg`}>
+            <span className="text-xl sm:text-2xl font-black text-white">{service.name[0]}</span>
           </div>
-          <h3 className={`text-2xl font-black uppercase ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+          <h3 className={`text-xl sm:text-2xl font-black uppercase ${darkMode ? 'text-white' : 'text-slate-900'}`}>
             {service.name}
           </h3>
-          <p className={`text-sm font-bold uppercase tracking-wider mt-1 ${
+          <p className={`text-xs sm:text-sm font-bold uppercase tracking-wider mt-1 ${
             darkMode ? 'text-slate-400' : 'text-slate-600'
           }`}>
             {service.type}
@@ -79,13 +79,13 @@ export default function QRModal({ service, onClose, darkMode, pickup, dropoff, l
         </div>
 
         {/* QR Code */}
-        <div className={`flex justify-center p-6 rounded-2xl mb-6 ${
+        <div className={`flex justify-center p-3 sm:p-4 md:p-6 rounded-xl sm:rounded-2xl mb-4 sm:mb-6 ${
           darkMode ? 'bg-slate-950/50' : 'bg-slate-50'
         }`}>
-          <div className="bg-white p-4 rounded-xl shadow-inner">
+          <div className="bg-white p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl shadow-inner">
             <QRCodeSVG 
               value={bookingLink}
-              size={200}
+              size={window.innerWidth < 640 ? 160 : window.innerWidth < 768 ? 180 : 200}
               level="H"
               includeMargin={true}
               fgColor="#000000"
@@ -95,16 +95,16 @@ export default function QRModal({ service, onClose, darkMode, pickup, dropoff, l
         </div>
 
         {/* Instructions */}
-        <div className={`rounded-2xl p-4 mb-6 ${
+        <div className={`rounded-xl sm:rounded-2xl p-3 sm:p-4 mb-4 sm:mb-6 ${
           darkMode ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200'
         }`}>
-          <div className="flex items-start gap-3">
-            <Smartphone size={20} className="text-blue-500 mt-0.5 shrink-0" />
+          <div className="flex items-start gap-2 sm:gap-3">
+            <Smartphone size={18} className="text-blue-500 mt-0.5 shrink-0" />
             <div>
-              <h4 className={`font-bold text-sm mb-1 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+              <h4 className={`font-bold text-xs sm:text-sm mb-1 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
                 {t('howToBook')}
               </h4>
-              <ol className={`text-xs space-y-1 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+              <ol className={`text-[10px] sm:text-xs space-y-0.5 sm:space-y-1 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                 <li>1. {t('openCamera')}</li>
                 <li>2. {t('pointAtQR')}</li>
                 <li>3. {service.name} {t('appOpens')} {service.name === 'Rapido' ? t('enterLocationsManually') : t('withRouteDetails')}</li>
@@ -116,18 +116,18 @@ export default function QRModal({ service, onClose, darkMode, pickup, dropoff, l
         </div>
 
         {/* Price Info */}
-        <div className={`text-center p-4 rounded-2xl mb-4 ${
+        <div className={`text-center p-3 sm:p-4 rounded-xl sm:rounded-2xl mb-3 sm:mb-4 ${
           darkMode ? 'bg-green-500/10 border border-green-500/20' : 'bg-green-50 border border-green-200'
         }`}>
-          <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${
+          <p className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1 ${
             darkMode ? 'text-green-400' : 'text-green-600'
           }`}>
             {t('estimatedPrice')}
           </p>
-          <p className={`text-3xl font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+          <p className={`text-2xl sm:text-3xl font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>
             {formatPrice(service.price)}
           </p>
-          <p className={`text-[10px] mt-1 ${darkMode ? 'text-slate-500' : 'text-slate-600'}`}>
+          <p className={`text-[9px] sm:text-[10px] mt-1 ${darkMode ? 'text-slate-500' : 'text-slate-600'}`}>
             {t('actualPriceVary')}
           </p>
         </div>
@@ -137,7 +137,7 @@ export default function QRModal({ service, onClose, darkMode, pickup, dropoff, l
           href={buttonLink}
           target="_blank"
           rel="noopener noreferrer"
-          className={`block w-full py-4 rounded-2xl font-black uppercase text-center transition-all shadow-lg ${
+          className={`block w-full py-3 sm:py-3.5 md:py-4 rounded-xl sm:rounded-2xl font-black uppercase text-sm sm:text-base text-center transition-all shadow-lg ${
             darkMode 
               ? 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white' 
               : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white'
@@ -146,7 +146,7 @@ export default function QRModal({ service, onClose, darkMode, pickup, dropoff, l
           {t('openApp')} {service.name}
         </a>
 
-        <p className={`text-center text-[10px] mt-4 ${darkMode ? 'text-slate-600' : 'text-slate-500'}`}>
+        <p className={`text-center text-[9px] sm:text-[10px] mt-3 sm:mt-4 ${darkMode ? 'text-slate-600' : 'text-slate-500'}`}>
           {service.name === 'Rapido' 
             ? t('opensEnterManually') 
             : `${t('opensWithRoute')} ${service.name} ${t('pricesMayVary')}`}
