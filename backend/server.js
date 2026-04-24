@@ -298,50 +298,50 @@ app.post('/api/fares', async (req, res) => {
             {
                 category: "Bike", icon: "🏍️",
                 services: [
-                    { name: "Rapido", type: "Bike Direct", base: 25, perKm: 7.3, minPerKm: 2.5, brand: "bg-yellow-500" },
-                    { name: "Rapido", type: "Bike Saver", base: 20, perKm: 6.5, minPerKm: 2.6, brand: "bg-yellow-500" },
-                    { name: "Uber", type: "Moto", base: 28, perKm: 9.5, minPerKm: 2.7, brand: "bg-black" }
+                    { name: "Rapido", type: "Bike Direct", base: 15, perKm: 6, minPerKm: 2.2, brand: "bg-yellow-500" },
+                    { name: "Rapido", type: "Bike Saver", base: 12, perKm: 5, minPerKm: 2.3, brand: "bg-yellow-500" },
+                    { name: "Uber", type: "Moto", base: 20, perKm: 7, minPerKm: 2.4, brand: "bg-black" }
                 ]
             },
             {
                 category: "Auto", icon: "🛺",
                 services: [
-                    { name: "Rapido", type: "Auto", base: 40, perKm: 13.4, minPerKm: 3.7, brand: "bg-yellow-500" },
-                    { name: "Namma Yatri", type: "Auto", base: 40, perKm: 13.4, minPerKm: 3.6, brand: "bg-green-600" },
-                    { name: "Uber", type: "Auto", base: 35, perKm: 13.0, minPerKm: 3.8, brand: "bg-black" }
+                    { name: "Rapido", type: "Auto", base: 30, perKm: 12, minPerKm: 3.5, brand: "bg-yellow-500" },
+                    { name: "Namma Yatri", type: "Auto", base: 30, perKm: 12, minPerKm: 3.5, brand: "bg-green-600" },
+                    { name: "Uber", type: "Auto", base: 35, perKm: 13, minPerKm: 3.6, brand: "bg-black" }
                 ]
             },
             {
                 category: "Cab Economy", icon: "🚗",
                 services: [
-                    { name: "Rapido", type: "Non-AC Cab", base: 55, perKm: 15.6, minPerKm: 3.8, brand: "bg-yellow-500" },
-                    { name: "Namma Yatri", type: "Non-AC Cab", base: 65, perKm: 20.0, minPerKm: 3.8, brand: "bg-green-600" },
-                    { name: "Uber", type: "Go Non-AC", base: 58, perKm: 20.3, minPerKm: 3.8, brand: "bg-black" }
+                    { name: "Rapido", type: "Non-AC Cab", base: 50, perKm: 11, minPerKm: 3.5, brand: "bg-yellow-500" },
+                    { name: "Namma Yatri", type: "Non-AC Cab", base: 55, perKm: 12, minPerKm: 3.5, brand: "bg-green-600" },
+                    { name: "Uber", type: "Go Non-AC", base: 50, perKm: 12, minPerKm: 3.6, brand: "bg-black" }
                 ]
             },
             {
                 category: "Cab AC", icon: "🚕",
                 services: [
-                    { name: "Rapido", type: "AC Cab", base: 60, perKm: 17.4, minPerKm: 3.8, brand: "bg-yellow-500" },
-                    { name: "Namma Yatri", type: "AC Cab", base: 65, perKm: 22.0, minPerKm: 3.8, brand: "bg-green-600" },
-                    { name: "Uber", type: "Go (AC)", base: 62, perKm: 20.7, minPerKm: 3.8, brand: "bg-black" }
+                    { name: "Rapido", type: "AC Cab", base: 65, perKm: 13, minPerKm: 3.5, brand: "bg-yellow-500" },
+                    { name: "Namma Yatri", type: "AC Cab", base: 70, perKm: 14, minPerKm: 3.5, brand: "bg-green-600" },
+                    { name: "Uber", type: "Go (AC)", base: 70, perKm: 14, minPerKm: 3.6, brand: "bg-black" }
                 ]
             },
             {
                 category: "Premium", icon: "✨",
                 services: [
-                    { name: "Rapido", type: "Cab Premium", base: 80, perKm: 21.7, minPerKm: 3.7, brand: "bg-yellow-500" },
-                    { name: "Namma Yatri", type: "Sedan Premium", base: 90, perKm: 25.0, minPerKm: 3.7, brand: "bg-green-600" },
-                    { name: "Uber", type: "Go Priority", base: 78, perKm: 23.2, minPerKm: 3.7, brand: "bg-black" },
-                    { name: "Uber", type: "Premier", base: 85, perKm: 25.4, minPerKm: 3.7, brand: "bg-black" }
+                    { name: "Rapido", type: "Cab Premium", base: 85, perKm: 16, minPerKm: 3.5, brand: "bg-yellow-500" },
+                    { name: "Namma Yatri", type: "Sedan Premium", base: 90, perKm: 17, minPerKm: 3.5, brand: "bg-green-600" },
+                    { name: "Uber", type: "Go Priority", base: 90, perKm: 17, minPerKm: 3.5, brand: "bg-black" },
+                    { name: "Uber", type: "Premier", base: 110, perKm: 20, minPerKm: 3.6, brand: "bg-black" }
                 ]
             },
             {
                 category: "XL / Large", icon: "🚙",
                 services: [
-                    { name: "Rapido", type: "XL Cab", base: 100, perKm: 27.7, minPerKm: 4.0, brand: "bg-yellow-500" },
-                    { name: "Namma Yatri", type: "XL Cab", base: 110, perKm: 29.0, minPerKm: 4.0, brand: "bg-green-600" },
-                    { name: "Uber", type: "UberXL", base: 123, perKm: 33.1, minPerKm: 4.0, brand: "bg-black" }
+                    { name: "Rapido", type: "XL Cab", base: 120, perKm: 22, minPerKm: 3.8, brand: "bg-yellow-500" },
+                    { name: "Namma Yatri", type: "XL Cab", base: 130, perKm: 23, minPerKm: 3.8, brand: "bg-green-600" },
+                    { name: "Uber", type: "UberXL", base: 140, perKm: 25, minPerKm: 3.8, brand: "bg-black" }
                 ]
             }
         ];

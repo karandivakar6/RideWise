@@ -28,21 +28,30 @@ const dropoffIcon = new L.DivIcon({
 });
 
 // Component to auto-fit map bounds
-function MapBounds({ pickup, dropoff, routeCoords }) {
+function MapBounds({ pickup, dropoff, routeCoords, mapPickMode }) {
   const map = useMap();
   
   useEffect(() => {
-    if (routeCoords && routeCoords.length > 0) {
+    // When in pick mode, center on existing location or default
+    if (mapPickMode === 'dropoff' && pickup) {
+      // Picking dropoff, center on pickup
+      map.setView([pickup.lat, pickup.lon], 13);
+    } else if (mapPickMode === 'pickup') {
+      // Picking pickup, center on Bangalore
+      map.setView([12.9716, 77.5946], 12);
+    } else if (routeCoords && routeCoords.length > 0) {
+      // Normal mode with route
       const bounds = L.latLngBounds(routeCoords);
       map.fitBounds(bounds, { padding: [50, 50] });
     } else if (pickup && dropoff) {
+      // Normal mode with both locations
       const bounds = L.latLngBounds([
         [pickup.lat, pickup.lon],
         [dropoff.lat, dropoff.lon]
       ]);
       map.fitBounds(bounds, { padding: [50, 50] });
     }
-  }, [map, pickup, dropoff, routeCoords]);
+  }, [map, pickup, dropoff, routeCoords, mapPickMode]);
   
   return null;
 }
@@ -65,6 +74,12 @@ export default function MapView({ pickup, dropoff, onMapClick, mapPickMode, lang
   const t = (key) => getTranslation(key, language);
 
   useEffect(() => {
+    // Clear route when in map pick mode
+    if (mapPickMode) {
+      setRouteCoords([]);
+      return;
+    }
+    
     if (pickup && dropoff) {
       // Fetch route from OSRM (Open Source Routing Machine) - 100% FREE!
       const url = `https://router.project-osrm.org/route/v1/driving/${pickup.lon},${pickup.lat};${dropoff.lon},${dropoff.lat}?overview=full&geometries=geojson`;
@@ -80,8 +95,11 @@ export default function MapView({ pickup, dropoff, onMapClick, mapPickMode, lang
           }
         })
         .catch(err => console.error('OSRM Route Error:', err));
+    } else {
+      // Clear route if either location is missing
+      setRouteCoords([]);
     }
-  }, [pickup, dropoff]);
+  }, [pickup, dropoff, mapPickMode]);
 
   const center = pickup ? [pickup.lat, pickup.lon] : [12.9716, 77.5946];
 
@@ -118,8 +136,8 @@ export default function MapView({ pickup, dropoff, onMapClick, mapPickMode, lang
         {/* Map click handler */}
         <MapClickHandler onMapClick={onMapClick} mapPickMode={mapPickMode} />
 
-        {/* Draw route polyline */}
-        {routeCoords.length > 0 && (
+        {/* Draw route polyline - only when NOT in pick mode */}
+        {routeCoords.length > 0 && !mapPickMode && (
           <Polyline 
             positions={routeCoords} 
             color="#3b82f6" 
@@ -128,22 +146,22 @@ export default function MapView({ pickup, dropoff, onMapClick, mapPickMode, lang
           />
         )}
 
-        {/* Pickup marker */}
-        {pickup && (
+        {/* Pickup marker - only show when NOT in pick mode or when picking dropoff */}
+        {pickup && (!mapPickMode || mapPickMode === 'dropoff') && (
           <Marker position={[pickup.lat, pickup.lon]} icon={pickupIcon}>
             <Popup>{pickup.name || t('pickupLocation')}</Popup>
           </Marker>
         )}
 
-        {/* Dropoff marker */}
-        {dropoff && (
+        {/* Dropoff marker - only show when NOT in pick mode or when picking pickup */}
+        {dropoff && (!mapPickMode || mapPickMode === 'pickup') && (
           <Marker position={[dropoff.lat, dropoff.lon]} icon={dropoffIcon}>
             <Popup>{dropoff.name || t('dropoffLocation')}</Popup>
           </Marker>
         )}
 
         {/* Auto-fit bounds */}
-        <MapBounds pickup={pickup} dropoff={dropoff} routeCoords={routeCoords} />
+        <MapBounds pickup={pickup} dropoff={dropoff} routeCoords={routeCoords} mapPickMode={mapPickMode} />
       </MapContainer>
       
       <div className="absolute top-4 left-4 bg-[#0b1120]/80 backdrop-blur-md px-4 py-2 rounded-2xl border border-slate-700 z-[1000]">

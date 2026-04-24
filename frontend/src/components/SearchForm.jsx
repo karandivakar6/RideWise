@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Navigation, ArrowDownUp, Building2, Locate, Map, Clock } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Search, MapPin, Navigation, ArrowDownUp, Building2, Locate, Map, Clock, X } from 'lucide-react';
 import { soundManager } from '../utils/soundEffects';
 import { getTranslation } from '../utils/translations';
 
@@ -13,6 +13,10 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
   const [currentLocation, setCurrentLocation] = useState(null);
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [recentSearches, setRecentSearches] = useState([]);
+  
+  // Refs for click-outside detection
+  const pickupRef = useRef(null);
+  const dropoffRef = useRef(null);
 
   // Bengaluru Bounding Box for Photon
   const BBOX = "77.4601,12.8340,77.8170,13.1437";
@@ -52,13 +56,6 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
       setDQuery(window.tempDropoff.name);
       window.lastDropoff = window.tempDropoff;
     }
-    
-    // Scroll to map when pick mode is activated
-    if (mapPickMode !== null) {
-      setTimeout(() => {
-        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-      }, 100);
-    }
   }, [mapPickMode]);
 
   // Try to get current location on component mount
@@ -80,6 +77,19 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
         { timeout: 5000 }
       );
     }
+  }, []);
+
+  // Click-outside handler to close dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (pickupRef.current && !pickupRef.current.contains(event.target) &&
+          dropoffRef.current && !dropoffRef.current.contains(event.target)) {
+        setFocusedInput(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const fetchSuggestions = async (query, type) => {
@@ -300,17 +310,42 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
 
       <div className="space-y-0">
         {/* Pickup Input */}
-        <div className="relative">
+        <div className="relative" ref={pickupRef}>
           <div className={`absolute left-[17px] top-[20px] w-3 h-3 bg-emerald-500 rounded-full border-2 z-10 ${
             darkMode ? 'border-[#161e2d]' : 'border-white'
           } ${mapPickMode === 'pickup' ? 'animate-pulse ring-4 ring-emerald-500/50' : ''}`}></div>
+          
+          {/* Clear button for pickup */}
+          {pQuery && (
+            <button
+              onClick={() => {
+                setPQuery('');
+                setPResults([]);
+                window.tempPickup = null;
+                setFocusedInput('pickup');
+              }}
+              className="absolute right-14 top-[18px] z-20 p-1 rounded-full hover:bg-slate-700/50 transition-colors"
+              title="Clear pickup location"
+            >
+              <X size={14} className={darkMode ? 'text-slate-400 hover:text-slate-300' : 'text-slate-600 hover:text-slate-800'} />
+            </button>
+          )}
+          
           <input 
             value={pQuery} 
             onChange={(e) => { 
               setPQuery(e.target.value); 
               fetchSuggestions(e.target.value, 'p'); 
             }}
-            onFocus={() => !mapPickMode && setFocusedInput('pickup')}
+            onFocus={() => {
+              if (!mapPickMode) {
+                setFocusedInput('pickup');
+                // If there's existing text, fetch suggestions
+                if (pQuery.length >= 2) {
+                  fetchSuggestions(pQuery, 'p');
+                }
+              }
+            }}
             placeholder={t('searchPickup')} 
             className={`w-full border-2 p-4 pl-12 pr-16 rounded-t-2xl outline-none text-sm transition-all ${
               mapPickMode === 'pickup' 
@@ -328,44 +363,6 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
                 ? 'bg-[#0e1623] border-emerald-500/30' 
                 : 'bg-white border-emerald-500'
             }`}>
-              {/* Recent Searches */}
-              {recentSearches.length > 0 && pQuery.length === 0 && (
-                <>
-                  <div className="px-4 py-2 bg-slate-900/50">
-                    <p className="text-[10px] uppercase tracking-wider font-bold text-slate-600">{t('recentSearches')}</p>
-                  </div>
-                  {recentSearches.slice(0, 3).map((search, idx) => (
-                    <div
-                      key={idx}
-                      onClick={() => {
-                        setPQuery(search.pickup.name);
-                        setDQuery(search.dropoff.name);
-                        window.tempPickup = search.pickup;
-                        window.tempDropoff = search.dropoff;
-                        setFocusedInput(null);
-                      }}
-                      className="p-4 hover:bg-slate-800/60 cursor-pointer border-b border-slate-800/30 transition-colors group"
-                    >
-                      <div className="flex items-center gap-3 mb-2">
-                        <Clock size={14} className="text-slate-500" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-emerald-400 truncate">
-                            📍 {search.pickup.name}
-                          </p>
-                          <p className="text-xs text-rose-400 truncate mt-1">
-                            🎯 {search.dropoff.name}
-                          </p>
-                        </div>
-                      </div>
-                      <p className="text-[10px] text-slate-600">
-                        {new Date(search.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </p>
-                    </div>
-                  ))}
-                  <div className="h-[1px] bg-slate-800/50"></div>
-                </>
-              )}
-
               {/* Current Location Option - Always First */}
               <div 
                 onClick={useCurrentLocation} 
@@ -460,17 +457,42 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
         </div>
 
         {/* Dropoff Input */}
-        <div className="relative">
+        <div className="relative" ref={dropoffRef}>
           <div className={`absolute left-[17px] top-[20px] w-3 h-3 bg-rose-500 rounded-full border-2 z-10 ${
             darkMode ? 'border-[#161e2d]' : 'border-white'
           } ${mapPickMode === 'dropoff' ? 'animate-pulse ring-4 ring-rose-500/50' : ''}`}></div>
+          
+          {/* Clear button for dropoff */}
+          {dQuery && (
+            <button
+              onClick={() => {
+                setDQuery('');
+                setDResults([]);
+                window.tempDropoff = null;
+                setFocusedInput('dropoff');
+              }}
+              className="absolute right-14 top-[18px] z-20 p-1 rounded-full hover:bg-slate-700/50 transition-colors"
+              title="Clear dropoff location"
+            >
+              <X size={14} className={darkMode ? 'text-slate-400 hover:text-slate-300' : 'text-slate-600 hover:text-slate-800'} />
+            </button>
+          )}
+          
           <input 
             value={dQuery} 
             onChange={(e) => { 
               setDQuery(e.target.value); 
               fetchSuggestions(e.target.value, 'd'); 
             }}
-            onFocus={() => !mapPickMode && setFocusedInput('dropoff')}
+            onFocus={() => {
+              if (!mapPickMode) {
+                setFocusedInput('dropoff');
+                // If there's existing text, fetch suggestions
+                if (dQuery.length >= 2) {
+                  fetchSuggestions(dQuery, 'd');
+                }
+              }
+            }}
             placeholder={t('searchDropoff')} 
             className={`w-full border-2 border-t-0 p-4 pl-12 pr-16 rounded-b-2xl outline-none text-sm transition-all ${
               mapPickMode === 'dropoff' 
@@ -488,44 +510,6 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
                 ? 'bg-[#0e1623] border-rose-500/30' 
                 : 'bg-white border-rose-500'
             }`}>
-              {/* Recent Searches */}
-              {recentSearches.length > 0 && dQuery.length === 0 && (
-                <>
-                  <div className="px-4 py-2 bg-slate-900/50">
-                    <p className="text-[10px] uppercase tracking-wider font-bold text-slate-600">{t('recentSearches')}</p>
-                  </div>
-                  {recentSearches.slice(0, 3).map((search, idx) => (
-                    <div
-                      key={idx}
-                      onClick={() => {
-                        setPQuery(search.pickup.name);
-                        setDQuery(search.dropoff.name);
-                        window.tempPickup = search.pickup;
-                        window.tempDropoff = search.dropoff;
-                        setFocusedInput(null);
-                      }}
-                      className="p-4 hover:bg-slate-800/60 cursor-pointer border-b border-slate-800/30 transition-colors group"
-                    >
-                      <div className="flex items-center gap-3 mb-2">
-                        <Clock size={14} className="text-slate-500" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-emerald-400 truncate">
-                            📍 {search.pickup.name}
-                          </p>
-                          <p className="text-xs text-rose-400 truncate mt-1">
-                            🎯 {search.dropoff.name}
-                          </p>
-                        </div>
-                      </div>
-                      <p className="text-[10px] text-slate-600">
-                        {new Date(search.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </p>
-                    </div>
-                  ))}
-                  <div className="h-[1px] bg-slate-800/50"></div>
-                </>
-              )}
-
               {/* Set on Map Option */}
               <div 
                 onClick={() => {
@@ -608,6 +592,82 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
         <Search size={18} /> 
         {pQuery && dQuery ? t('findRides') : t('enterLocations')}
       </button>
+
+      {/* Recent Searches Section */}
+      {recentSearches.length > 0 && (
+        <div className={`mt-6 rounded-2xl overflow-hidden border-2 ${
+          darkMode 
+            ? 'bg-[#0e1623] border-slate-800/50' 
+            : 'bg-white border-slate-200'
+        }`}>
+          <div className={`px-4 py-3 flex items-center gap-2 ${
+            darkMode ? 'bg-slate-900/50 border-b border-slate-800/50' : 'bg-slate-50 border-b border-slate-200'
+          }`}>
+            <Clock size={16} className={darkMode ? 'text-slate-400' : 'text-slate-600'} />
+            <h3 className={`text-sm font-bold uppercase tracking-wider ${
+              darkMode ? 'text-slate-300' : 'text-slate-700'
+            }`}>
+              {t('recentSearches')}
+            </h3>
+          </div>
+          
+          <div className="divide-y divide-slate-800/30">
+            {recentSearches.slice(0, 5).map((search, idx) => (
+              <div
+                key={idx}
+                onClick={() => {
+                  setPQuery(search.pickup.name);
+                  setDQuery(search.dropoff.name);
+                  window.tempPickup = search.pickup;
+                  window.tempDropoff = search.dropoff;
+                  soundManager.playClick();
+                }}
+                className={`p-4 cursor-pointer transition-all group ${
+                  darkMode 
+                    ? 'hover:bg-slate-800/60' 
+                    : 'hover:bg-slate-50'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                      <p className={`text-sm font-semibold truncate ${
+                        darkMode 
+                          ? 'text-emerald-400 group-hover:text-emerald-300' 
+                          : 'text-emerald-600 group-hover:text-emerald-500'
+                      }`}>
+                        {search.pickup.name}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-rose-500 rounded-full"></div>
+                      <p className={`text-sm font-semibold truncate ${
+                        darkMode 
+                          ? 'text-rose-400 group-hover:text-rose-300' 
+                          : 'text-rose-600 group-hover:text-rose-500'
+                      }`}>
+                        {search.dropoff.name}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-[10px] ${
+                      darkMode ? 'text-slate-600' : 'text-slate-500'
+                    }`}>
+                      {new Date(search.timestamp).toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric',
+                        year: new Date(search.timestamp).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                      })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

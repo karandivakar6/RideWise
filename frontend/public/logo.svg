@@ -1,0 +1,30 @@
+<svg width="500" height="500" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+  <!-- Gradient Definition -->
+  <defs>
+    <linearGradient id="pinGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0d9488;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Location Pin -->
+  <path d="M 250 80 C 180 80 125 135 125 205 C 125 240 140 270 160 295 L 250 420 L 340 295 C 360 270 375 240 375 205 C 375 135 320 80 250 80 Z" 
+        fill="url(#pinGradient)" stroke="none"/>
+  
+  <!-- Inner Circle -->
+  <circle cx="250" cy="205" r="50" fill="white"/>
+  
+  <!-- Inner Dot -->
+  <circle cx="250" cy="205" r="25" fill="url(#pinGradient)"/>
+  
+  <!-- RIDEWISE Text -->
+  <text x="250" y="470" 
+        font-family="Arial, sans-serif" 
+        font-size="48" 
+        font-weight="900"
+        letter-spacing="12"
+        fill="#CBD5E1"
+        text-anchor="middle">
+    RIDEWISE
+  </text>
+</svg>
