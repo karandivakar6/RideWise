@@ -6,8 +6,10 @@ import ProfileModal from './components/ProfileModal';
 import SettingsModal from './components/SettingsModal';
 import QRModal from './components/QRModal';
 import Logo from './components/Logo';
-import { Settings, Info, Clock, Route, Moon, Sun, User } from 'lucide-react';
+import { Settings, Info, Clock, Route, Moon, Sun, User, Share2 } from 'lucide-react';
 import { soundManager } from './utils/soundEffects';
+import { getTranslation } from './utils/translations';
+import { formatPrice } from './utils/currency';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -21,6 +23,9 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('settings_language') || 'en';
+  });
 
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
@@ -28,6 +33,18 @@ function App() {
     if (savedUser) setUser(JSON.parse(savedUser));
     if (savedTheme) setDarkMode(savedTheme === 'dark');
   }, []);
+
+  // Listen for language changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const newLang = localStorage.getItem('settings_language') || 'en';
+      setLanguage(newLang);
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  const t = (key) => getTranslation(key, language);
 
   const toggleTheme = () => {
     soundManager.playClick();
@@ -84,6 +101,12 @@ function App() {
     setPickup(p); 
     setDropoff(d);
     
+    // Save to recent searches if auto-save is enabled
+    const autoSaveEnabled = JSON.parse(localStorage.getItem('settings_autoSave') || 'true');
+    if (autoSaveEnabled) {
+      saveToRecentSearches(p, d);
+    }
+    
     try {
       const res = await fetch('http://localhost:5000/api/fares', {
         method: 'POST',
@@ -116,6 +139,26 @@ function App() {
     setLoading(false);
   };
 
+  const saveToRecentSearches = (pickup, dropoff) => {
+    try {
+      const recentSearches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
+      const newSearch = {
+        pickup: { name: pickup.name, lat: pickup.lat, lon: pickup.lon },
+        dropoff: { name: dropoff.name, lat: dropoff.lat, lon: dropoff.lon },
+        timestamp: new Date().toISOString()
+      };
+      
+      // Add to beginning and keep only last 10 searches
+      const updated = [newSearch, ...recentSearches.filter(s => 
+        s.pickup.name !== pickup.name || s.dropoff.name !== dropoff.name
+      )].slice(0, 10);
+      
+      localStorage.setItem('recentSearches', JSON.stringify(updated));
+    } catch (err) {
+      console.log('Failed to save recent search:', err);
+    }
+  };
+
   const sendNotificationEmail = async (user, pickup, dropoff, results) => {
     // Check if notifications are enabled
     const notificationsEnabled = JSON.parse(localStorage.getItem('settings_notifications') || 'true');
@@ -146,6 +189,75 @@ function App() {
     soundManager.playClick();
     setSelectedService(service);
     setShowQR(true);
+  };
+
+  const handleShareLocation = async () => {
+    // Check if location sharing is enabled
+    const locationSharingEnabled = JSON.parse(localStorage.getItem('settings_locationSharing') || 'true');
+    if (!locationSharingEnabled) {
+      alert(t('locationDisabled'));
+      return;
+    }
+
+    soundManager.playClick();
+
+    if (!pickup) {
+      alert('No location to share');
+      return;
+    }
+
+    const shareText = `📍 My Current Location\n\n${pickup.name}\n\nPickup: ${pickup.lat}, ${pickup.lon}\n${dropoff ? `Destination: ${dropoff.name}\n${dropoff.lat}, ${dropoff.lon}\n` : ''}\n🗺️ Google Maps: https://www.google.com/maps?q=${pickup.lat},${pickup.lon}`;
+    
+    const shareData = {
+      title: 'My Location - RideWise',
+      text: shareText,
+    };
+
+    // Try Web Share API first (works on mobile)
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        soundManager.playSuccess();
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.log('Share failed:', err);
+          // Fallback to manual sharing
+          showShareOptions(shareText);
+        }
+      }
+    } else {
+      // Fallback for desktop - show share options
+      showShareOptions(shareText);
+    }
+  };
+
+  const showShareOptions = (text) => {
+    const encodedText = encodeURIComponent(text);
+    const shareUrl = `https://www.google.com/maps?q=${pickup.lat},${pickup.lon}`;
+    const encodedUrl = encodeURIComponent(shareUrl);
+
+    const options = `
+Share via:
+
+WhatsApp: https://wa.me/?text=${encodedText}
+Email: mailto:?subject=My Location - RideWise&body=${encodedText}
+Twitter: https://twitter.com/intent/tweet?text=${encodedText}
+
+Or copy this text:
+${text}
+    `;
+
+    // Try to copy to clipboard
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert('✅ Location copied to clipboard!\n\nYou can now paste it in WhatsApp, Instagram DM, or any app.\n\nGoogle Maps link: ' + shareUrl);
+        soundManager.playSuccess();
+      }).catch(() => {
+        alert(options);
+      });
+    } else {
+      alert(options);
+    }
   };
 
   return (
@@ -210,7 +322,7 @@ function App() {
                 : 'bg-orange-50 border-orange-300'
             }`}>
               <div className="bg-orange-500 p-1 rounded-full"><Info size={10} color="white" /></div>
-              <p className="text-orange-400 text-[9px] font-black uppercase tracking-widest flex-1">Bengaluru traffic surge may apply</p>
+              <p className="text-orange-400 text-[9px] font-black uppercase tracking-widest flex-1">{t('trafficSurge')}</p>
             </div>
 
             <div className={`rounded-[32px] p-6 border shadow-2xl relative z-20 ${
@@ -218,12 +330,13 @@ function App() {
                 ? 'bg-[#161e2d] border-slate-800/50' 
                 : 'bg-white border-slate-200'
             }`}>
-              <h3 className="text-[10px] font-black uppercase text-slate-600 tracking-[0.3em] mb-4 ml-1">Set Journey</h3>
+              <h3 className="text-[10px] font-black uppercase text-slate-600 tracking-[0.3em] mb-4 ml-1">{t('setJourney')}</h3>
               <SearchForm 
                 onSearch={handleSearch} 
                 mapPickMode={mapPickMode}
                 setMapPickMode={setMapPickMode}
                 darkMode={darkMode}
+                language={language}
               />
             </div>
 
@@ -248,14 +361,29 @@ function App() {
                        darkMode ? 'text-slate-300' : 'text-slate-700'
                      }`}>
                         <Route size={16} className="text-blue-500" />
-                        <span className="font-bold text-sm">{results.distance} km</span>
+                        <span className="font-bold text-sm">{results.distance} {t('km')}</span>
                      </div>
                      <div className={`flex items-center gap-2 ${
                        darkMode ? 'text-slate-300' : 'text-slate-700'
                      }`}>
                         <Clock size={16} className="text-emerald-500" />
-                        <span className="font-bold text-sm">{results.duration || "~ ETA"}</span>
+                        <span className="font-bold text-sm">{results.duration || `~ ${t('eta')}`}</span>
                      </div>
+                     {/* Share Location Button */}
+                     {JSON.parse(localStorage.getItem('settings_locationSharing') || 'true') && (
+                       <button
+                         onClick={handleShareLocation}
+                         className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all ${
+                           darkMode 
+                             ? 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30' 
+                             : 'bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200'
+                         }`}
+                         title="Share my location"
+                       >
+                         <Share2 size={16} />
+                         <span className="hidden sm:inline">Share</span>
+                       </button>
+                     )}
                   </div>
                 )}
 
@@ -264,6 +392,7 @@ function App() {
                   dropoff={dropoff}
                   onMapClick={handleMapClick}
                   mapPickMode={mapPickMode}
+                  language={language}
                 />
                 
                 {/* Services Grid - only show with results */}
@@ -284,7 +413,7 @@ function App() {
                       <h4 className={`font-black uppercase tracking-tight text-sm ${
                         darkMode ? 'text-white' : 'text-slate-900'
                       }`}>{cat.category}</h4>
-                      <span className="text-[9px] text-green-500 font-bold ml-auto uppercase tracking-tighter">Verified Prices</span>
+                      <span className="text-[9px] text-green-500 font-bold ml-auto uppercase tracking-tighter">{t('verifiedPrices')}</span>
                     </div>
                     <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-3">
                       {cat.services.map((s, idx) => (
@@ -312,7 +441,7 @@ function App() {
                             <div className="flex flex-col items-start">
                               <p className={`font-black text-lg ${
                                 darkMode ? 'text-white' : 'text-slate-900'
-                              }`}>₹{s.price}</p>
+                              }`}>{formatPrice(s.price)}</p>
                               {s.estimatedTime && (
                                 <div className="flex items-center gap-1">
                                   <Clock size={10} className="text-slate-600" />
@@ -321,11 +450,11 @@ function App() {
                               )}
                             </div>
                             {idx === 0 && (
-                              <p className="text-[9px] text-green-500 font-bold uppercase">Best</p>
+                              <p className="text-[9px] text-green-500 font-bold uppercase">{t('best')}</p>
                             )}
                           </div>
                           <p className="text-[8px] text-blue-400 font-bold uppercase tracking-wider mt-2 text-center">
-                            Tap for QR
+                            {t('tapForQR')}
                           </p>
                         </button>
                       ))}
@@ -365,6 +494,8 @@ function App() {
               onClose={() => setShowSettings(false)} 
               darkMode={darkMode}
               onToggleTheme={toggleTheme}
+              language={language}
+              onLanguageChange={setLanguage}
             />
           )}
           
@@ -376,6 +507,7 @@ function App() {
               dropoff={dropoff}
               darkMode={darkMode}
               onClose={() => setShowQR(false)}
+              language={language}
             />
           )}
         </>

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { X, Bell, MapPin, CreditCard, Shield, Globe, Volume2, Moon } from 'lucide-react';
 import { soundManager } from '../utils/soundEffects';
+import { getTranslation } from '../utils/translations';
 
-export default function SettingsModal({ onClose, darkMode, onToggleTheme }) {
+export default function SettingsModal({ onClose, darkMode, onToggleTheme, language: currentLanguage = 'en', onLanguageChange }) {
+  const t = (key) => getTranslation(key, currentLanguage);
   const [notifications, setNotifications] = useState(() => {
     const saved = localStorage.getItem('settings_notifications');
     return saved !== null ? JSON.parse(saved) : true;
@@ -45,10 +47,16 @@ export default function SettingsModal({ onClose, darkMode, onToggleTheme }) {
 
   useEffect(() => {
     localStorage.setItem('settings_language', language);
-  }, [language]);
+    // Trigger language change in parent component
+    if (onLanguageChange) {
+      onLanguageChange(language);
+    }
+  }, [language, onLanguageChange]);
 
   useEffect(() => {
     localStorage.setItem('settings_currency', currency);
+    // Force re-render of price displays by triggering storage event
+    window.dispatchEvent(new Event('storage'));
   }, [currency]);
 
   const handleLogout = () => {
@@ -81,7 +89,7 @@ export default function SettingsModal({ onClose, darkMode, onToggleTheme }) {
           darkMode ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-100 border-slate-200'
         }`}>
           <h2 className={`text-xl font-black uppercase ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-            Settings
+            {t('settings')}
           </h2>
           <button 
             onClick={onClose}
@@ -98,7 +106,7 @@ export default function SettingsModal({ onClose, darkMode, onToggleTheme }) {
           {/* Appearance */}
           <div>
             <h3 className={`text-sm font-black uppercase mb-4 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-              Appearance
+              {t('appearance')}
             </h3>
             <div className={`flex items-center justify-between p-4 rounded-xl ${
               darkMode ? 'bg-slate-800' : 'bg-slate-100'
@@ -106,9 +114,9 @@ export default function SettingsModal({ onClose, darkMode, onToggleTheme }) {
               <div className="flex items-center gap-3">
                 <Moon size={20} className={darkMode ? 'text-blue-400' : 'text-slate-600'} />
                 <div>
-                  <p className={`font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Dark Mode</p>
+                  <p className={`font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{t('darkMode')}</p>
                   <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                    Toggle dark/light theme
+                    {t('toggleTheme')}
                   </p>
                 </div>
               </div>
@@ -119,7 +127,7 @@ export default function SettingsModal({ onClose, darkMode, onToggleTheme }) {
           {/* Notifications */}
           <div>
             <h3 className={`text-sm font-black uppercase mb-4 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-              Notifications
+              {t('notifications')}
             </h3>
             <div className={`space-y-3 p-4 rounded-xl ${
               darkMode ? 'bg-slate-800' : 'bg-slate-100'
@@ -128,9 +136,9 @@ export default function SettingsModal({ onClose, darkMode, onToggleTheme }) {
                 <div className="flex items-center gap-3">
                   <Bell size={20} className={darkMode ? 'text-blue-400' : 'text-slate-600'} />
                   <div>
-                    <p className={`font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Push Notifications</p>
+                    <p className={`font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{t('pushNotifications')}</p>
                     <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                      Get updates about rides
+                      {t('getUpdates')}
                     </p>
                   </div>
                 </div>
@@ -141,9 +149,9 @@ export default function SettingsModal({ onClose, darkMode, onToggleTheme }) {
                 <div className="flex items-center gap-3">
                   <Volume2 size={20} className={darkMode ? 'text-blue-400' : 'text-slate-600'} />
                   <div>
-                    <p className={`font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Sound Effects</p>
+                    <p className={`font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{t('soundEffects')}</p>
                     <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                      Play sounds for alerts
+                      {t('playSounds')}
                     </p>
                   </div>
                 </div>
@@ -155,7 +163,7 @@ export default function SettingsModal({ onClose, darkMode, onToggleTheme }) {
           {/* Privacy */}
           <div>
             <h3 className={`text-sm font-black uppercase mb-4 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-              Privacy & Location
+              {t('privacyLocation')}
             </h3>
             <div className={`space-y-3 p-4 rounded-xl ${
               darkMode ? 'bg-slate-800' : 'bg-slate-100'
@@ -164,9 +172,9 @@ export default function SettingsModal({ onClose, darkMode, onToggleTheme }) {
                 <div className="flex items-center gap-3">
                   <MapPin size={20} className={darkMode ? 'text-blue-400' : 'text-slate-600'} />
                   <div>
-                    <p className={`font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Location Sharing</p>
+                    <p className={`font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{t('locationSharing')}</p>
                     <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                      Share location for rides
+                      {t('shareLocation')}
                     </p>
                   </div>
                 </div>
@@ -177,9 +185,9 @@ export default function SettingsModal({ onClose, darkMode, onToggleTheme }) {
                 <div className="flex items-center gap-3">
                   <Shield size={20} className={darkMode ? 'text-blue-400' : 'text-slate-600'} />
                   <div>
-                    <p className={`font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Auto-save Searches</p>
+                    <p className={`font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{t('autoSaveSearches')}</p>
                     <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                      Save recent locations
+                      {t('saveRecentLoc')}
                     </p>
                   </div>
                 </div>
@@ -191,7 +199,7 @@ export default function SettingsModal({ onClose, darkMode, onToggleTheme }) {
           {/* Language & Region */}
           <div>
             <h3 className={`text-sm font-black uppercase mb-4 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-              Language & Region
+              {t('languageRegion')}
             </h3>
             <div className={`space-y-3 p-4 rounded-xl ${
               darkMode ? 'bg-slate-800' : 'bg-slate-100'
@@ -199,7 +207,7 @@ export default function SettingsModal({ onClose, darkMode, onToggleTheme }) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Globe size={20} className={darkMode ? 'text-blue-400' : 'text-slate-600'} />
-                  <p className={`font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Language</p>
+                  <p className={`font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{t('language')}</p>
                 </div>
                 <select 
                   value={language}
@@ -220,7 +228,7 @@ export default function SettingsModal({ onClose, darkMode, onToggleTheme }) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <CreditCard size={20} className={darkMode ? 'text-blue-400' : 'text-slate-600'} />
-                  <p className={`font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Currency</p>
+                  <p className={`font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{t('currency')}</p>
                 </div>
                 <select 
                   value={currency}
@@ -244,7 +252,7 @@ export default function SettingsModal({ onClose, darkMode, onToggleTheme }) {
             onClick={handleLogout}
             className="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-black rounded-xl transition-colors uppercase"
           >
-            Logout
+            {t('logout')}
           </button>
         </div>
       </div>

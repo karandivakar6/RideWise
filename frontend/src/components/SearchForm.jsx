@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Search, MapPin, Navigation, ArrowDownUp, Building2, Locate, Map } from 'lucide-react';
+import { soundManager } from '../utils/soundEffects';
+import { getTranslation } from '../utils/translations';
 
-export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, darkMode }) {
+export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, darkMode, language = 'en' }) {
+  const t = (key) => getTranslation(key, language);
   const [pQuery, setPQuery] = useState('');
   const [dQuery, setDQuery] = useState('');
   const [pResults, setPResults] = useState([]);
@@ -133,6 +136,13 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
   };
 
   const useCurrentLocation = () => {
+    // Check if location sharing is enabled
+    const locationSharingEnabled = JSON.parse(localStorage.getItem('settings_locationSharing') || 'true');
+    if (!locationSharingEnabled) {
+      alert(t('locationDisabled'));
+      return;
+    }
+    
     if (currentLocation) {
       // Use already fetched location
       const coords = {
@@ -162,12 +172,12 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
           setLoadingLocation(false);
         },
         (error) => {
-          alert('Unable to get your location. Please enable location services.');
+          alert(t('unableToGetLocation'));
           setLoadingLocation(false);
         }
       );
     } else {
-      alert('Geolocation is not supported by your browser.');
+      alert(t('geoNotSupported'));
     }
   };
 
@@ -234,6 +244,26 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
 
   return (
     <div className="relative">
+      {/* Map Pick Mode Overlay - Cancel Button */}
+      {mapPickMode && (
+        <div className="fixed top-4 right-4 z-[10001] animate-in fade-in slide-in-from-top-5 duration-300">
+          <button
+            onClick={() => {
+              console.log('Canceling map pick mode');
+              setMapPickMode(null);
+              soundManager.playClick();
+            }}
+            className="px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-black rounded-2xl shadow-2xl flex items-center gap-2 transition-all uppercase"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+            {t('cancelMapSelection')}
+          </button>
+        </div>
+      )}
+      
       {/* Connection Line between dots */}
       <div className="absolute left-[23px] top-[56px] w-[2px] h-[22px] bg-gradient-to-b from-emerald-500 via-slate-700 to-rose-500"></div>
       
@@ -243,7 +273,7 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
         className={`absolute right-3 top-[52px] z-10 p-2 rounded-full transition-all hover:scale-110 ${
           darkMode ? 'bg-slate-800 hover:bg-slate-700' : 'bg-slate-200 hover:bg-slate-300'
         }`}
-        title="Swap locations"
+        title={t('swapLocations')}
       >
         <ArrowDownUp size={16} className={darkMode ? 'text-slate-300' : 'text-slate-700'} />
       </button>
@@ -253,7 +283,7 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
         <div className="relative">
           <div className={`absolute left-[17px] top-[20px] w-3 h-3 bg-emerald-500 rounded-full border-2 z-10 ${
             darkMode ? 'border-[#161e2d]' : 'border-white'
-          }`}></div>
+          } ${mapPickMode === 'pickup' ? 'animate-pulse ring-4 ring-emerald-500/50' : ''}`}></div>
           <input 
             value={pQuery} 
             onChange={(e) => { 
@@ -261,11 +291,13 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
               fetchSuggestions(e.target.value, 'p'); 
             }}
             onFocus={() => !mapPickMode && setFocusedInput('pickup')}
-            placeholder="Search area/landmark, then use 'Set on map' for exact spot" 
+            placeholder={t('searchPickup')} 
             className={`w-full border-2 p-4 pl-12 pr-16 rounded-t-2xl outline-none text-sm transition-all ${
-              darkMode 
-                ? 'bg-[#0e1623] border-slate-800/50 text-white placeholder-slate-600 focus:border-emerald-500/50' 
-                : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-emerald-500'
+              mapPickMode === 'pickup' 
+                ? 'ring-4 ring-emerald-500/30 border-emerald-500' 
+                : darkMode 
+                  ? 'bg-[#0e1623] border-slate-800/50 text-white placeholder-slate-600 focus:border-emerald-500/50' 
+                  : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-emerald-500'
             }`} 
           />
           
@@ -290,10 +322,10 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors">
-                    {loadingLocation ? 'Getting your location...' : 'Current Location'}
+                    {loadingLocation ? t('getCurrentLocation') : t('currentLocation')}
                   </p>
                   <p className="text-xs text-slate-500">
-                    {currentLocation ? 'Use your current location' : 'Enable GPS to use'}
+                    {currentLocation ? t('useCurrentLoc') : t('enableGPS')}
                   </p>
                 </div>
                 {currentLocation && (
@@ -316,10 +348,10 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-white group-hover:text-blue-400 transition-colors">
-                    Set location on map
+                    {t('setLocationOnMap')}
                   </p>
                   <p className="text-xs text-slate-500">
-                    Choose precise pickup point
+                    {t('choosePrecisePickup')}
                   </p>
                 </div>
               </div>
@@ -329,7 +361,7 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
                 <>
                   {pQuery.length >= 2 && (
                     <div className="px-4 py-2 bg-slate-900/50">
-                      <p className="text-[10px] uppercase tracking-wider font-bold text-slate-600">Search Results</p>
+                      <p className="text-[10px] uppercase tracking-wider font-bold text-slate-600">{t('searchResults')}</p>
                     </div>
                   )}
                   {pResults.map((s, i) => {
@@ -361,8 +393,8 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
               {pQuery.length >= 2 && pResults.length === 0 && (
                 <div className="p-6 text-center">
                   <MapPin size={32} className="text-slate-700 mx-auto mb-2" />
-                  <p className="text-sm text-slate-500">No locations found for "{pQuery}"</p>
-                  <p className="text-xs text-slate-600 mt-1">Try searching for landmarks, neighborhoods, or main roads</p>
+                  <p className="text-sm text-slate-500">{t('noLocationsFound')} "{pQuery}"</p>
+                  <p className="text-xs text-slate-600 mt-1">{t('trySearching')}</p>
                 </div>
               )}
             </div>
@@ -373,7 +405,7 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
         <div className="relative">
           <div className={`absolute left-[17px] top-[20px] w-3 h-3 bg-rose-500 rounded-full border-2 z-10 ${
             darkMode ? 'border-[#161e2d]' : 'border-white'
-          }`}></div>
+          } ${mapPickMode === 'dropoff' ? 'animate-pulse ring-4 ring-rose-500/50' : ''}`}></div>
           <input 
             value={dQuery} 
             onChange={(e) => { 
@@ -381,11 +413,13 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
               fetchSuggestions(e.target.value, 'd'); 
             }}
             onFocus={() => !mapPickMode && setFocusedInput('dropoff')}
-            placeholder="Search area/landmark, then use 'Set on map' for exact spot" 
+            placeholder={t('searchDropoff')} 
             className={`w-full border-2 border-t-0 p-4 pl-12 pr-16 rounded-b-2xl outline-none text-sm transition-all ${
-              darkMode 
-                ? 'bg-[#0e1623] border-slate-800/50 text-white placeholder-slate-600 focus:border-rose-500/50' 
-                : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-rose-500'
+              mapPickMode === 'dropoff' 
+                ? 'ring-4 ring-rose-500/30 border-rose-500 border-t-2' 
+                : darkMode 
+                  ? 'bg-[#0e1623] border-slate-800/50 text-white placeholder-slate-600 focus:border-rose-500/50' 
+                  : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-rose-500'
             }`} 
           />
           
@@ -411,10 +445,10 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-white group-hover:text-blue-400 transition-colors">
-                    Set location on map
+                    {t('setLocationOnMap')}
                   </p>
                   <p className="text-xs text-slate-500">
-                    Choose precise dropoff point
+                    {t('choosePreciseDropoff')}
                   </p>
                 </div>
               </div>
@@ -424,7 +458,7 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
                 <>
                   {dQuery.length >= 2 && (
                     <div className="px-4 py-2 bg-slate-900/50">
-                      <p className="text-[10px] uppercase tracking-wider font-bold text-slate-600">Search Results</p>
+                      <p className="text-[10px] uppercase tracking-wider font-bold text-slate-600">{t('searchResults')}</p>
                     </div>
                   )}
                   {dResults.map((s, i) => {
@@ -456,8 +490,8 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
               {dQuery.length >= 2 && dResults.length === 0 && (
                 <div className="p-6 text-center">
                   <MapPin size={32} className="text-slate-700 mx-auto mb-2" />
-                  <p className="text-sm text-slate-500">No locations found for "{dQuery}"</p>
-                  <p className="text-xs text-slate-600 mt-1">Try searching for landmarks, neighborhoods, or main roads</p>
+                  <p className="text-sm text-slate-500">{t('noLocationsFound')} "{dQuery}"</p>
+                  <p className="text-xs text-slate-600 mt-1">{t('trySearching')}</p>
                 </div>
               )}
             </div>
@@ -476,7 +510,7 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
         }`}
       >
         <Search size={18} /> 
-        {pQuery && dQuery ? 'Find Rides' : 'Enter locations to continue'}
+        {pQuery && dQuery ? t('findRides') : t('enterLocations')}
       </button>
     </div>
   );

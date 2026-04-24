@@ -1,9 +1,13 @@
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { X, Smartphone } from 'lucide-react';
+import { getTranslation } from '../utils/translations';
+import { formatPrice } from '../utils/currency';
 
-export default function QRModal({ service, onClose, darkMode, pickup, dropoff }) {
-  // Generate booking link based on service provider
+export default function QRModal({ service, onClose, darkMode, pickup, dropoff, language = 'en' }) {
+  const t = (key) => getTranslation(key, language);
+  
+  // Generate booking link for QR code (deep links with location data)
   const generateBookingLink = () => {
     const pickupLat = pickup?.lat || '';
     const pickupLon = pickup?.lon || '';
@@ -22,7 +26,7 @@ export default function QRModal({ service, onClose, darkMode, pickup, dropoff })
         return `https://rapido.bike`;
       
       case 'Namma Yatri':
-        // Namma Yatri universal link (confirmed working)
+        // Namma Yatri deep link - opens app with pre-filled locations (for QR code)
         return `https://nammayatri.in/link/?srcLat=${pickupLat}&srcLon=${pickupLon}&destLat=${dropoffLat}&destLon=${dropoffLon}&srcAddress=${pickupName}&destAddress=${dropoffName}`;
       
       default:
@@ -31,7 +35,18 @@ export default function QRModal({ service, onClose, darkMode, pickup, dropoff })
     }
   };
 
-  const bookingLink = generateBookingLink();
+  // Generate button link (simple URLs for browser)
+  const generateButtonLink = () => {
+    if (service.name === 'Namma Yatri') {
+      // Simple website link for button - works in browser
+      return 'https://nammayatri.in/';
+    }
+    // For other services, use the same deep link
+    return generateBookingLink();
+  };
+
+  const bookingLink = generateBookingLink(); // For QR code
+  const buttonLink = generateButtonLink(); // For button
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[10000] p-4 animate-in fade-in zoom-in-95 duration-200">
@@ -87,14 +102,14 @@ export default function QRModal({ service, onClose, darkMode, pickup, dropoff })
             <Smartphone size={20} className="text-blue-500 mt-0.5 shrink-0" />
             <div>
               <h4 className={`font-bold text-sm mb-1 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-                How to Book
+                {t('howToBook')}
               </h4>
               <ol className={`text-xs space-y-1 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                <li>1. Open your phone camera</li>
-                <li>2. Point at QR code and tap notification</li>
-                <li>3. {service.name} app opens {service.name === 'Rapido' ? '(enter locations manually)' : 'with route details'}</li>
-                <li>4. {service.name === 'Rapido' ? 'Enter pickup & dropoff locations' : 'Verify pickup & dropoff locations'}</li>
-                <li>5. Select {service.type} and complete booking</li>
+                <li>1. {t('openCamera')}</li>
+                <li>2. {t('pointAtQR')}</li>
+                <li>3. {service.name} {t('appOpens')} {service.name === 'Rapido' ? t('enterLocationsManually') : t('withRouteDetails')}</li>
+                <li>4. {service.name === 'Rapido' ? t('enterPickupDropoff') : t('verifyLocations')}</li>
+                <li>5. {t('selectAndBook')} {service.type} {t('completeBooking')}</li>
               </ol>
             </div>
           </div>
@@ -107,20 +122,34 @@ export default function QRModal({ service, onClose, darkMode, pickup, dropoff })
           <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${
             darkMode ? 'text-green-400' : 'text-green-600'
           }`}>
-            Estimated Price
+            {t('estimatedPrice')}
           </p>
           <p className={`text-3xl font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-            ₹{service.price}
+            {formatPrice(service.price)}
           </p>
           <p className={`text-[10px] mt-1 ${darkMode ? 'text-slate-500' : 'text-slate-600'}`}>
-            Actual price may vary in the app
+            {t('actualPriceVary')}
           </p>
         </div>
 
+        {/* Open App Button */}
+        <a
+          href={buttonLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`block w-full py-4 rounded-2xl font-black uppercase text-center transition-all shadow-lg ${
+            darkMode 
+              ? 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white' 
+              : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white'
+          }`}
+        >
+          {t('openApp')} {service.name}
+        </a>
+
         <p className={`text-center text-[10px] mt-4 ${darkMode ? 'text-slate-600' : 'text-slate-500'}`}>
           {service.name === 'Rapido' 
-            ? 'QR opens Rapido app. Enter locations manually.' 
-            : `QR opens ${service.name} with route. Prices may vary.`}
+            ? t('opensEnterManually') 
+            : `${t('opensWithRoute')} ${service.name} ${t('pricesMayVary')}`}
         </p>
       </div>
     </div>

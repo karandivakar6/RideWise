@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { getTranslation } from '../utils/translations';
 
 // Fix Leaflet's default icon issue with Vite/Webpack
 delete L.Icon.Default.prototype._getIconUrl;
@@ -59,8 +60,9 @@ function MapClickHandler({ onMapClick, mapPickMode }) {
   return null;
 }
 
-export default function MapView({ pickup, dropoff, onMapClick, mapPickMode }) {
+export default function MapView({ pickup, dropoff, onMapClick, mapPickMode, language = 'en' }) {
   const [routeCoords, setRouteCoords] = useState([]);
+  const t = (key) => getTranslation(key, language);
 
   useEffect(() => {
     if (pickup && dropoff) {
@@ -86,8 +88,11 @@ export default function MapView({ pickup, dropoff, onMapClick, mapPickMode }) {
   return (
     <div className="rounded-[32px] overflow-hidden border-2 border-slate-800 shadow-2xl relative">
       {mapPickMode && (
-        <div className="absolute top-0 left-0 right-0 bg-blue-600 text-white text-center py-3 z-[1000] font-bold text-sm shadow-lg animate-pulse flex items-center justify-center gap-2">
-          <span>🎯 Click anywhere on the map to select {mapPickMode} location</span>
+        <div className="absolute top-0 left-0 right-0 bg-blue-600 text-white text-center py-2 px-4 z-[1000] font-bold text-sm shadow-lg flex items-center justify-between">
+          <div className="flex items-center gap-2 flex-1 justify-center">
+            <span className="animate-pulse">🎯</span>
+            <span>{t('clickToSelect')} {mapPickMode} {t('location')}</span>
+          </div>
         </div>
       )}
       
@@ -96,13 +101,13 @@ export default function MapView({ pickup, dropoff, onMapClick, mapPickMode }) {
         zoom={13} 
         style={{ width: '100%', height: '350px', cursor: mapPickMode ? 'crosshair' : 'grab' }}
         zoomControl={true}
-        dragging={mapPickMode ? true : false}
+        dragging={true}
         touchZoom={true}
         doubleClickZoom={true}
         scrollWheelZoom={true}
         boxZoom={false}
-        keyboard={mapPickMode ? true : false}
-        tap={mapPickMode ? true : false}
+        keyboard={true}
+        tap={true}
       >
         {/* Dark Mode OpenStreetMap Tiles - 100% FREE! */}
         <TileLayer
@@ -126,14 +131,14 @@ export default function MapView({ pickup, dropoff, onMapClick, mapPickMode }) {
         {/* Pickup marker */}
         {pickup && (
           <Marker position={[pickup.lat, pickup.lon]} icon={pickupIcon}>
-            <Popup>{pickup.name || 'Pickup Location'}</Popup>
+            <Popup>{pickup.name || t('pickupLocation')}</Popup>
           </Marker>
         )}
 
         {/* Dropoff marker */}
         {dropoff && (
           <Marker position={[dropoff.lat, dropoff.lon]} icon={dropoffIcon}>
-            <Popup>{dropoff.name || 'Drop-off Location'}</Popup>
+            <Popup>{dropoff.name || t('dropoffLocation')}</Popup>
           </Marker>
         )}
 
