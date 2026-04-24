@@ -1,14 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, Bell, MapPin, CreditCard, Shield, Globe, Volume2, Moon } from 'lucide-react';
+import { X, MapPin, CreditCard, Shield, Globe, Volume2, Moon } from 'lucide-react';
 import { soundManager } from '../utils/soundEffects';
 import { getTranslation } from '../utils/translations';
 
 export default function SettingsModal({ onClose, darkMode, onToggleTheme, language: currentLanguage = 'en', onLanguageChange }) {
   const t = (key) => getTranslation(key, currentLanguage);
-  const [notifications, setNotifications] = useState(() => {
-    const saved = localStorage.getItem('settings_notifications');
-    return saved !== null ? JSON.parse(saved) : true;
-  });
   const [locationSharing, setLocationSharing] = useState(() => {
     const saved = localStorage.getItem('settings_locationSharing');
     return saved !== null ? JSON.parse(saved) : true;
@@ -29,10 +25,6 @@ export default function SettingsModal({ onClose, darkMode, onToggleTheme, langua
   });
 
   // Save settings to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('settings_notifications', JSON.stringify(notifications));
-  }, [notifications]);
-
   useEffect(() => {
     localStorage.setItem('settings_locationSharing', JSON.stringify(locationSharing));
   }, [locationSharing]);
@@ -132,19 +124,6 @@ export default function SettingsModal({ onClose, darkMode, onToggleTheme, langua
             <div className={`space-y-3 p-4 rounded-xl ${
               darkMode ? 'bg-slate-800' : 'bg-slate-100'
             }`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Bell size={20} className={darkMode ? 'text-blue-400' : 'text-slate-600'} />
-                  <div>
-                    <p className={`font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{t('pushNotifications')}</p>
-                    <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                      {t('getUpdates')}
-                    </p>
-                  </div>
-                </div>
-                <Toggle enabled={notifications} onChange={setNotifications} />
-              </div>
-
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Volume2 size={20} className={darkMode ? 'text-blue-400' : 'text-slate-600'} />

@@ -120,12 +120,6 @@ function App() {
       if (res.ok && data.categories) {
           setResults(data);
           soundManager.playSuccess();
-          
-          // Send notification email if enabled
-          const notificationsEnabled = localStorage.getItem('settings_notifications');
-          if (notificationsEnabled === null || JSON.parse(notificationsEnabled)) {
-            sendNotificationEmail(user, p, d, data);
-          }
       } else {
           soundManager.playError();
           alert(`Backend Error: ${data.msg || "Something went wrong"}`);
@@ -154,34 +148,11 @@ function App() {
       )].slice(0, 10);
       
       localStorage.setItem('recentSearches', JSON.stringify(updated));
+      
+      // Trigger event to update UI
+      window.dispatchEvent(new Event('recentSearchesUpdated'));
     } catch (err) {
       console.log('Failed to save recent search:', err);
-    }
-  };
-
-  const sendNotificationEmail = async (user, pickup, dropoff, results) => {
-    // Check if notifications are enabled
-    const notificationsEnabled = JSON.parse(localStorage.getItem('settings_notifications') || 'true');
-    if (!notificationsEnabled) {
-      console.log('Notifications disabled - skipping email');
-      return;
-    }
-    
-    try {
-      await fetch('http://localhost:5000/api/notifications/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userEmail: user.email,
-          userName: user.name,
-          pickup: pickup.name,
-          dropoff: dropoff.name,
-          distance: results.distance,
-          duration: results.duration
-        })
-      });
-    } catch (err) {
-      console.log('Failed to send notification email:', err);
     }
   };
 

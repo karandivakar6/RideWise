@@ -3,25 +3,12 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 // Models
 const User = require('./models/User');
 const Ride = require('./models/Ride');
 
-// Email transporter setup
-const emailTransporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: process.env.EMAIL_PORT || 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
-// 1. THIS IS THE LINE THAT WAS MISSING!
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -150,143 +137,6 @@ app.put('/api/users/:id', async (req, res) => {
         console.error('❌ Update profile error:', err.message);
         console.error('Full error:', err);
         res.status(500).json({ msg: 'Failed to update profile', error: err.message });
-    }
-});
-
-// --- EMAIL NOTIFICATION ROUTES ---
-
-// Send ride search notification
-app.post('/api/notifications/search', async (req, res) => {
-    try {
-        const { userEmail, userName, pickup, dropoff, distance, duration } = req.body;
-        
-        // Check if email is configured
-        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-            console.log('📧 Email not configured - skipping notification');
-            return res.json({ msg: 'Email notifications not configured' });
-        }
-
-        const mailOptions = {
-            from: process.env.EMAIL_FROM || 'RideWise Pro <noreply@ridewise.com>',
-            to: userEmail,
-            subject: '🚗 Your RideWise Ride Search Results',
-            html: `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <style>
-                        body { font-family: Arial, sans-serif; background-color: #0b1120; color: #fff; padding: 20px; }
-                        .container { max-width: 600px; margin: 0 auto; background: #161e2d; border-radius: 16px; padding: 30px; }
-                        .header { text-align: center; margin-bottom: 30px; }
-                        .header h1 { color: #3b82f6; margin: 0; }
-                        .info-box { background: #0b1120; padding: 20px; border-radius: 12px; margin: 20px 0; }
-                        .info-row { display: flex; justify-content: space-between; margin: 10px 0; }
-                        .label { color: #94a3b8; font-size: 14px; }
-                        .value { color: #fff; font-weight: bold; }
-                        .footer { text-align: center; margin-top: 30px; color: #64748b; font-size: 12px; }
-                    </style>
-                </head>
-                <body>
-                    <div class="container">
-                        <div class="header">
-                            <h1>🚗 RideWise Pro</h1>
-                            <p>Your Ride Search Results</p>
-                        </div>
-                        
-                        <p>Hi <strong>${userName}</strong>,</p>
-                        <p>You just searched for a ride on RideWise. Here are the details:</p>
-                        
-                        <div class="info-box">
-                            <div class="info-row">
-                                <span class="label">📍 Pickup:</span>
-                                <span class="value">${pickup}</span>
-                            </div>
-                            <div class="info-row">
-                                <span class="label">🎯 Dropoff:</span>
-                                <span class="value">${dropoff}</span>
-                            </div>
-                            <div class="info-row">
-                                <span class="label">📏 Distance:</span>
-                                <span class="value">${distance} km</span>
-                            </div>
-                            <div class="info-row">
-                                <span class="label">⏱️ Duration:</span>
-                                <span class="value">${duration}</span>
-                            </div>
-                        </div>
-                        
-                        <p>Compare prices across Rapido, Uber, and Namma Yatri to find the best deal!</p>
-                        
-                        <div class="footer">
-                            <p>This is an automated email from RideWise Pro</p>
-                            <p>You can disable notifications in Settings</p>
-                        </div>
-                    </div>
-                </body>
-                </html>
-            `
-        };
-
-        await emailTransporter.sendMail(mailOptions);
-        console.log('✅ Notification email sent to:', userEmail);
-        res.json({ msg: 'Notification sent successfully' });
-        
-    } catch (err) {
-        console.error('❌ Email error:', err.message);
-        // Don't fail the request if email fails
-        res.json({ msg: 'Email notification failed', error: err.message });
-    }
-});
-
-// Send profile update notification
-app.post('/api/notifications/profile-update', async (req, res) => {
-    try {
-        const { userEmail, userName } = req.body;
-        
-        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-            console.log('📧 Email not configured - skipping notification');
-            return res.json({ msg: 'Email notifications not configured' });
-        }
-
-        const mailOptions = {
-            from: process.env.EMAIL_FROM || 'RideWise Pro <noreply@ridewise.com>',
-            to: userEmail,
-            subject: '✅ Profile Updated - RideWise Pro',
-            html: `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <style>
-                        body { font-family: Arial, sans-serif; background-color: #0b1120; color: #fff; padding: 20px; }
-                        .container { max-width: 600px; margin: 0 auto; background: #161e2d; border-radius: 16px; padding: 30px; }
-                        .success { background: #10b981; color: white; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0; }
-                    </style>
-                </head>
-                <body>
-                    <div class="container">
-                        <h1 style="color: #3b82f6;">🚗 RideWise Pro</h1>
-                        <div class="success">
-                            <h2 style="margin: 0;">✅ Profile Updated Successfully</h2>
-                        </div>
-                        <p>Hi <strong>${userName}</strong>,</p>
-                        <p>Your RideWise profile has been updated successfully.</p>
-                        <p>If you didn't make this change, please contact support immediately.</p>
-                        <div style="text-align: center; margin-top: 30px; color: #64748b; font-size: 12px;">
-                            <p>RideWise Pro - Bengaluru Ride Aggregator</p>
-                        </div>
-                    </div>
-                </body>
-                </html>
-            `
-        };
-
-        await emailTransporter.sendMail(mailOptions);
-        console.log('✅ Profile update email sent to:', userEmail);
-        res.json({ msg: 'Notification sent successfully' });
-        
-    } catch (err) {
-        console.error('❌ Email error:', err.message);
-        res.json({ msg: 'Email notification failed', error: err.message });
     }
 });
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Navigation, ArrowDownUp, Building2, Locate, Map } from 'lucide-react';
+import { Search, MapPin, Navigation, ArrowDownUp, Building2, Locate, Map, Clock } from 'lucide-react';
 import { soundManager } from '../utils/soundEffects';
 import { getTranslation } from '../utils/translations';
 
@@ -12,9 +12,29 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
   const [focusedInput, setFocusedInput] = useState(null);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [loadingLocation, setLoadingLocation] = useState(false);
+  const [recentSearches, setRecentSearches] = useState([]);
 
   // Bengaluru Bounding Box for Photon
   const BBOX = "77.4601,12.8340,77.8170,13.1437";
+
+  // Load recent searches
+  useEffect(() => {
+    const loadRecentSearches = () => {
+      const autoSaveEnabled = JSON.parse(localStorage.getItem('settings_autoSave') || 'true');
+      if (autoSaveEnabled) {
+        const saved = JSON.parse(localStorage.getItem('recentSearches') || '[]');
+        setRecentSearches(saved);
+      } else {
+        setRecentSearches([]);
+      }
+    };
+    
+    loadRecentSearches();
+    
+    // Listen for updates
+    window.addEventListener('recentSearchesUpdated', loadRecentSearches);
+    return () => window.removeEventListener('recentSearchesUpdated', loadRecentSearches);
+  }, []);
 
   // Update input when location is picked from map
   useEffect(() => {
@@ -308,6 +328,44 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
                 ? 'bg-[#0e1623] border-emerald-500/30' 
                 : 'bg-white border-emerald-500'
             }`}>
+              {/* Recent Searches */}
+              {recentSearches.length > 0 && pQuery.length === 0 && (
+                <>
+                  <div className="px-4 py-2 bg-slate-900/50">
+                    <p className="text-[10px] uppercase tracking-wider font-bold text-slate-600">{t('recentSearches')}</p>
+                  </div>
+                  {recentSearches.slice(0, 3).map((search, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => {
+                        setPQuery(search.pickup.name);
+                        setDQuery(search.dropoff.name);
+                        window.tempPickup = search.pickup;
+                        window.tempDropoff = search.dropoff;
+                        setFocusedInput(null);
+                      }}
+                      className="p-4 hover:bg-slate-800/60 cursor-pointer border-b border-slate-800/30 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <Clock size={14} className="text-slate-500" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-emerald-400 truncate">
+                            📍 {search.pickup.name}
+                          </p>
+                          <p className="text-xs text-rose-400 truncate mt-1">
+                            🎯 {search.dropoff.name}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-slate-600">
+                        {new Date(search.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </p>
+                    </div>
+                  ))}
+                  <div className="h-[1px] bg-slate-800/50"></div>
+                </>
+              )}
+
               {/* Current Location Option - Always First */}
               <div 
                 onClick={useCurrentLocation} 
@@ -430,6 +488,44 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
                 ? 'bg-[#0e1623] border-rose-500/30' 
                 : 'bg-white border-rose-500'
             }`}>
+              {/* Recent Searches */}
+              {recentSearches.length > 0 && dQuery.length === 0 && (
+                <>
+                  <div className="px-4 py-2 bg-slate-900/50">
+                    <p className="text-[10px] uppercase tracking-wider font-bold text-slate-600">{t('recentSearches')}</p>
+                  </div>
+                  {recentSearches.slice(0, 3).map((search, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => {
+                        setPQuery(search.pickup.name);
+                        setDQuery(search.dropoff.name);
+                        window.tempPickup = search.pickup;
+                        window.tempDropoff = search.dropoff;
+                        setFocusedInput(null);
+                      }}
+                      className="p-4 hover:bg-slate-800/60 cursor-pointer border-b border-slate-800/30 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <Clock size={14} className="text-slate-500" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-emerald-400 truncate">
+                            📍 {search.pickup.name}
+                          </p>
+                          <p className="text-xs text-rose-400 truncate mt-1">
+                            🎯 {search.dropoff.name}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-slate-600">
+                        {new Date(search.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </p>
+                    </div>
+                  ))}
+                  <div className="h-[1px] bg-slate-800/50"></div>
+                </>
+              )}
+
               {/* Set on Map Option */}
               <div 
                 onClick={() => {

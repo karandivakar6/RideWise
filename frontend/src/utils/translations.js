@@ -91,6 +91,9 @@ export const translations = {
     // Share
     shareLocation: "Share Location",
     locationCopied: "Location copied to clipboard!",
+    
+    // Recent Searches
+    recentSearches: "Recent Searches",
   },
   
   hi: {
@@ -183,6 +186,9 @@ export const translations = {
     // Share
     shareLocation: "स्थान साझा करें",
     locationCopied: "स्थान क्लिपबोर्ड पर कॉपी किया गया!",
+    
+    // Recent Searches
+    recentSearches: "हालिया खोजें",
   },
   
   kn: {
@@ -275,6 +281,9 @@ export const translations = {
     // Share
     shareLocation: "ಸ್ಥಳ ಹಂಚಿಕೊಳ್ಳಿ",
     locationCopied: "ಸ್ಥಳವನ್ನು ಕ್ಲಿಪ್‌ಬೋರ್ಡ್‌ಗೆ ನಕಲಿಸಲಾಗಿದೆ!",
+    
+    // Recent Searches
+    recentSearches: "ಇತ್ತೀಚಿನ ಹುಡುಕಾಟಗಳು",
   },
   
   ta: {
@@ -367,6 +376,9 @@ export const translations = {
     // Share
     shareLocation: "இடத்தைப் பகிரவும்",
     locationCopied: "இடம் கிளிப்போர்டில் நகலெடுக்கப்பட்டது!",
+    
+    // Recent Searches
+    recentSearches: "சமீபத்திய தேடல்கள்",
   }
 };
 
