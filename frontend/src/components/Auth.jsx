@@ -6,6 +6,7 @@ export default function Auth({ onLoginSuccess }) {
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -76,13 +77,22 @@ export default function Auth({ onLoginSuccess }) {
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           required
         />
-        <input
-          type="password"
-          placeholder="PASSWORD"
-          className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 px-5 outline-none focus:border-blue-500 text-xs font-bold transition-all"
-          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-          required
-        />
+        <div className="relative">
+          <input
+            type={showPassword ? "text" : "password"}
+            placeholder="PASSWORD"
+            className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 px-5 pr-12 outline-none focus:border-blue-500 text-xs font-bold transition-all"
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-blue-400 transition-colors text-sm"
+          >
+            {showPassword ? '👁️' : '👁️‍🗨️'}
+          </button>
+        </div>
         <button 
           disabled={loading}
           type="submit" 

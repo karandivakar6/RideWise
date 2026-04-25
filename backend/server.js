@@ -234,6 +234,7 @@ app.post('/api/fares', async (req, res) => {
     
     let distanceKm = 0;
     let baseDurationMin = 0;
+    let adjustedDurationMin = 0;
     let durationText = "";
 
     try {
@@ -255,7 +256,7 @@ app.post('/api/fares', async (req, res) => {
             const combinedMultiplier = trafficMultiplier * corridorMultiplier;
             
             // Calculate realistic duration with traffic
-            const adjustedDurationMin = Math.round(baseDurationMin * combinedMultiplier);
+            adjustedDurationMin = Math.round(baseDurationMin * combinedMultiplier);
             
             // Add traffic indicator
             let trafficStatus = "";
@@ -280,6 +281,7 @@ app.post('/api/fares', async (req, res) => {
         // Base Bengaluru speed: ~20 km/h in traffic, ~40 km/h without
         const avgSpeed = 20 / trafficMultiplier; // Slower in heavy traffic
         const estMins = Math.round((distanceKm / avgSpeed) * 60);
+        adjustedDurationMin = estMins; // Set for fare calculation
         durationText = `${estMins} mins (Est.)`;
     }
 
@@ -294,54 +296,57 @@ app.post('/api/fares', async (req, res) => {
         // Light surge during peak hours (most apps apply 10-20% surge)
         const surgeFactor = trafficMultiplier >= 2.0 ? 1.15 : 1.0;
         
+        // Extract actual duration in minutes from OSRM response
+        const actualDurationMin = adjustedDurationMin || Math.round((distanceKm / 20) * 60);
+        
         const categories = [
             {
                 category: "Bike", icon: "🏍️",
                 services: [
-                    { name: "Rapido", type: "Bike Direct", base: 15, perKm: 6, minPerKm: 2.2, brand: "bg-yellow-500" },
-                    { name: "Rapido", type: "Bike Saver", base: 12, perKm: 5, minPerKm: 2.3, brand: "bg-yellow-500" },
-                    { name: "Uber", type: "Moto", base: 20, perKm: 7, minPerKm: 2.4, brand: "bg-black" }
+                    { name: "Rapido", type: "Bike Direct", algorithm: "rapido", base: 20, perKm: 7.5, perMin: 1, brand: "bg-yellow-500" },
+                    { name: "Rapido", type: "Bike Saver", algorithm: "rapido", base: 18, perKm: 7, perMin: 0.9, brand: "bg-yellow-500" },
+                    { name: "Uber", type: "Moto", algorithm: "uber", base: 22, perKm: 7, perMin: 1.1, brand: "bg-black" }
                 ]
             },
             {
                 category: "Auto", icon: "🛺",
                 services: [
-                    { name: "Rapido", type: "Auto", base: 30, perKm: 12, minPerKm: 3.5, brand: "bg-yellow-500" },
-                    { name: "Namma Yatri", type: "Auto", base: 30, perKm: 12, minPerKm: 3.5, brand: "bg-green-600" },
-                    { name: "Uber", type: "Auto", base: 35, perKm: 13, minPerKm: 3.6, brand: "bg-black" }
+                    { name: "Rapido", type: "Auto", algorithm: "rapido", base: 38, perKm: 13, perMin: 1.2, brand: "bg-yellow-500" },
+                    { name: "Namma Yatri", type: "Auto", algorithm: "nammayatri", base: 28, perKm: 13.5, perMin: 1.3, brand: "bg-green-600" },
+                    { name: "Uber", type: "Auto", algorithm: "uber", base: 38, perKm: 12.5, perMin: 1.4, brand: "bg-black" }
                 ]
             },
             {
                 category: "Cab Economy", icon: "🚗",
                 services: [
-                    { name: "Rapido", type: "Non-AC Cab", base: 50, perKm: 11, minPerKm: 3.5, brand: "bg-yellow-500" },
-                    { name: "Namma Yatri", type: "Non-AC Cab", base: 55, perKm: 12, minPerKm: 3.5, brand: "bg-green-600" },
-                    { name: "Uber", type: "Go Non-AC", base: 50, perKm: 12, minPerKm: 3.6, brand: "bg-black" }
+                    { name: "Rapido", type: "Non-AC Cab", algorithm: "rapido", base: 50, perKm: 10, perMin: 1.2, brand: "bg-yellow-500" },
+                    { name: "Namma Yatri", type: "Non-AC Cab", algorithm: "nammayatri", base: 45, perKm: 12, perMin: 1.3, brand: "bg-green-600" },
+                    { name: "Uber", type: "Go Non-AC", algorithm: "uber", base: 45, perKm: 9, perMin: 1.2, brand: "bg-black" }
                 ]
             },
             {
                 category: "Cab AC", icon: "🚕",
                 services: [
-                    { name: "Rapido", type: "AC Cab", base: 65, perKm: 13, minPerKm: 3.5, brand: "bg-yellow-500" },
-                    { name: "Namma Yatri", type: "AC Cab", base: 70, perKm: 14, minPerKm: 3.5, brand: "bg-green-600" },
-                    { name: "Uber", type: "Go (AC)", base: 70, perKm: 14, minPerKm: 3.6, brand: "bg-black" }
+                    { name: "Rapido", type: "AC Cab", algorithm: "rapido", base: 62, perKm: 11.5, perMin: 1.4, brand: "bg-yellow-500" },
+                    { name: "Namma Yatri", type: "AC Cab", algorithm: "nammayatri", base: 58, perKm: 13.5, perMin: 1.5, brand: "bg-green-600" },
+                    { name: "Uber", type: "Go (AC)", algorithm: "uber", base: 55, perKm: 10.5, perMin: 1.3, brand: "bg-black" }
                 ]
             },
             {
                 category: "Premium", icon: "✨",
                 services: [
-                    { name: "Rapido", type: "Cab Premium", base: 85, perKm: 16, minPerKm: 3.5, brand: "bg-yellow-500" },
-                    { name: "Namma Yatri", type: "Sedan Premium", base: 90, perKm: 17, minPerKm: 3.5, brand: "bg-green-600" },
-                    { name: "Uber", type: "Go Priority", base: 90, perKm: 17, minPerKm: 3.5, brand: "bg-black" },
-                    { name: "Uber", type: "Premier", base: 110, perKm: 20, minPerKm: 3.6, brand: "bg-black" }
+                    { name: "Rapido", type: "Cab Premium", algorithm: "rapido", base: 80, perKm: 13.5, perMin: 1.6, brand: "bg-yellow-500" },
+                    { name: "Namma Yatri", type: "Sedan Premium", algorithm: "nammayatri", base: 75, perKm: 16, perMin: 1.7, brand: "bg-green-600" },
+                    { name: "Uber", type: "Go Priority", algorithm: "uber", base: 78, perKm: 13.5, perMin: 1.5, brand: "bg-black" },
+                    { name: "Uber", type: "Premier", algorithm: "uber", base: 88, perKm: 15, perMin: 1.8, brand: "bg-black" }
                 ]
             },
             {
                 category: "XL / Large", icon: "🚙",
                 services: [
-                    { name: "Rapido", type: "XL Cab", base: 120, perKm: 22, minPerKm: 3.8, brand: "bg-yellow-500" },
-                    { name: "Namma Yatri", type: "XL Cab", base: 130, perKm: 23, minPerKm: 3.8, brand: "bg-green-600" },
-                    { name: "Uber", type: "UberXL", base: 140, perKm: 25, minPerKm: 3.8, brand: "bg-black" }
+                    { name: "Rapido", type: "XL Cab", algorithm: "rapido", base: 110, perKm: 18, perMin: 2, brand: "bg-yellow-500" },
+                    { name: "Namma Yatri", type: "XL Cab", algorithm: "nammayatri", base: 105, perKm: 21, perMin: 2.2, brand: "bg-green-600" },
+                    { name: "Uber", type: "UberXL", algorithm: "uber", base: 108, perKm: 19, perMin: 2.1, brand: "bg-black" }
                 ]
             }
         ];
@@ -349,26 +354,65 @@ app.post('/api/fares', async (req, res) => {
         const results = categories.map(cat => ({
             ...cat,
             services: cat.services.map(s => {
-                // Base fare + per km charge
-                const baseFare = s.base + (distanceKm * s.perKm);
+                let totalPrice;
                 
-                // Apply surge pricing during peak traffic
-                const surgedFare = baseFare * surgeFactor;
+                // Provider-specific pricing algorithms using Uber's formula:
+                // Base + (Distance × PerKm) + (Duration × PerMin)
                 
-                // Add platform fee and round
-                const totalPrice = Math.round(surgedFare + platformFee);
-                
-                const estimatedTime = Math.round(distanceKm * s.minPerKm);
+                if (s.algorithm === 'uber') {
+                    // UBER: Base + Distance + Time components
+                    const baseFare = s.base + (distanceKm * s.perKm) + (actualDurationMin * s.perMin);
+                    
+                    // Light surge during peak hours
+                    const hour = new Date().getHours();
+                    const isPeakHour = (hour >= 8 && hour <= 10) || (hour >= 17 && hour <= 20);
+                    const surgeFactor = isPeakHour ? 1.1 : 1.0;
+                    
+                    totalPrice = Math.round(baseFare * surgeFactor);
+                    
+                } else if (s.algorithm === 'rapido') {
+                    // RAPIDO: Base + Distance + Time components
+                    const baseFare = s.base + (distanceKm * s.perKm) + (actualDurationMin * s.perMin);
+                    
+                    // Minimal peak hour increase
+                    const hour = new Date().getHours();
+                    const isPeakHour = (hour >= 8 && hour <= 10) || (hour >= 17 && hour <= 20);
+                    const peakMultiplier = isPeakHour ? 1.02 : 1.0;
+                    
+                    totalPrice = Math.round(baseFare * peakMultiplier);
+                    
+                } else if (s.algorithm === 'nammayatri') {
+                    // NAMMA YATRI: Government meter-based with time component
+                    const meterFare = s.base + (distanceKm * s.perKm) + (actualDurationMin * s.perMin);
+                    
+                    // Fixed night charge (10 PM - 6 AM)
+                    const hour = new Date().getHours();
+                    const isNightTime = hour >= 22 || hour < 6;
+                    const nightCharge = isNightTime ? 50 : 0;
+                    
+                    // Total before rounding
+                    const beforeRounding = meterFare + nightCharge;
+                    
+                    // Round to nearest ₹5 (government regulation)
+                    totalPrice = Math.round(beforeRounding / 5) * 5;
+                    
+                } else {
+                    // Fallback
+                    const baseFare = s.base + (distanceKm * s.perKm) + (actualDurationMin * s.perMin);
+                    totalPrice = Math.round(baseFare);
+                }
                 
                 return {
                     ...s,
                     price: totalPrice,
-                    estimatedTime: `${estimatedTime} mins`
+                    estimatedTime: durationText
                 };
             }).sort((a, b) => a.price - b.price)
         }));
 
-        console.log(`💰 Real-world pricing: Traffic=${trafficMultiplier.toFixed(2)}x | Surge=${surgeFactor === 1.0 ? 'None' : '+15%'} | Distance=${distanceKm.toFixed(2)}km`);
+        const hour = new Date().getHours();
+        const isPeakHour = (hour >= 8 && hour <= 10) || (hour >= 17 && hour <= 20);
+        console.log(`💰 Uber Formula Applied: Base + (${distanceKm.toFixed(2)}km × PerKm) + (${actualDurationMin}min × PerMin) | Peak=${isPeakHour ? 'Yes' : 'No'}`);
 
         // NOTE: Rides are only saved when user actually books, not during price searches
         // TODO: Implement booking endpoint (POST /api/bookings) to save actual rides

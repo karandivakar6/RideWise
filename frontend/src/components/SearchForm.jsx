@@ -612,7 +612,7 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
           </div>
           
           <div className="divide-y divide-slate-800/30">
-            {recentSearches.slice(0, 5).map((search, idx) => (
+            {recentSearches.slice(0, 3).map((search, idx) => (
               <div
                 key={idx}
                 onClick={() => {
