@@ -6,6 +6,7 @@ import ProfileModal from './components/ProfileModal';
 import SettingsModal from './components/SettingsModal';
 import QRModal from './components/QRModal';
 import Logo from './components/Logo';
+import RideCard from './components/RideCard';
 import { Settings, Info, Clock, Route, Moon, Sun, User, Share2 } from 'lucide-react';
 import { soundManager } from './utils/soundEffects';
 import { getTranslation } from './utils/translations';
@@ -386,48 +387,21 @@ ${text}
                       }`}>{cat.category}</h4>
                       <span className="text-[9px] text-green-500 font-bold ml-auto uppercase tracking-tighter">{t('verifiedPrices')}</span>
                     </div>
-                    <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="p-4 space-y-3">
                       {cat.services.map((s, idx) => (
-                        <button 
-                          key={idx} 
+                        <div 
+                          key={idx}
                           onClick={() => handleServiceClick(s)}
-                          className={`flex flex-col p-4 rounded-2xl transition-all cursor-pointer hover:scale-105 active:scale-95 ${
-                            idx === 0 
-                              ? 'bg-green-500/5 border border-green-500/20 hover:bg-green-500/10' 
-                              : darkMode
-                                ? 'hover:bg-slate-800/40 border border-transparent hover:border-blue-500/30'
-                                : 'hover:bg-slate-50 border border-transparent hover:border-blue-500/30'
-                          }`}
+                          className="cursor-pointer"
                         >
-                          <div className="flex items-center gap-2 mb-3">
-                            <div className={`w-9 h-9 ${s.brand} rounded-xl flex items-center justify-center font-black text-xs text-white shadow-lg shrink-0`}>{s.name[0]}</div>
-                            <div className="flex-1 min-w-0 text-left">
-                              <p className={`font-bold text-sm truncate ${
-                                darkMode ? 'text-white' : 'text-slate-900'
-                              }`}>{s.name}</p>
-                              <p className="text-[10px] text-slate-500 font-bold uppercase truncate">{s.type}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-end justify-between mt-auto">
-                            <div className="flex flex-col items-start">
-                              <p className={`font-black text-lg ${
-                                darkMode ? 'text-white' : 'text-slate-900'
-                              }`}>{formatPrice(s.price)}</p>
-                              {s.estimatedTime && (
-                                <div className="flex items-center gap-1">
-                                  <Clock size={10} className="text-slate-600" />
-                                  <p className="text-[9px] text-slate-600 font-semibold">{s.estimatedTime}</p>
-                                </div>
-                              )}
-                            </div>
-                            {idx === 0 && (
-                              <p className="text-[9px] text-green-500 font-bold uppercase">{t('best')}</p>
-                            )}
-                          </div>
-                          <p className="text-[8px] text-blue-400 font-bold uppercase tracking-wider mt-2 text-center">
-                            {t('tapForQR')}
-                          </p>
-                        </button>
+                          <RideCard
+                            service={s.name}
+                            price={s.price}
+                            time={s.estimatedTime ? s.estimatedTime.replace(/\D/g, '') : '5'}
+                            type={s.type}
+                            color={s.brand}
+                          />
+                        </div>
                       ))}
                     </div>
                   </div>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, Navigation, ArrowDownUp, Building2, Locate, Map, Clock, X } from 'lucide-react';
+import { Search, MapPin, Navigation, ArrowDownUp, Building2, Locate, Map, Clock, X, Star, Home, Briefcase, Heart } from 'lucide-react';
 import { soundManager } from '../utils/soundEffects';
 import { getTranslation } from '../utils/translations';
+import { favoritesManager } from '../utils/favoritesManager';
 
 export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, darkMode, language = 'en' }) {
   const t = (key) => getTranslation(key, language);
@@ -13,6 +14,7 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
   const [currentLocation, setCurrentLocation] = useState(null);
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [recentSearches, setRecentSearches] = useState([]);
+  const [favorites, setFavorites] = useState([]);
   
   // Refs for click-outside detection
   const pickupRef = useRef(null);
@@ -40,6 +42,20 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
     return () => window.removeEventListener('recentSearchesUpdated', loadRecentSearches);
   }, []);
 
+  // Load favorites
+  useEffect(() => {
+    const loadFavorites = () => {
+      const favs = favoritesManager.getFavorites();
+      setFavorites(favs);
+    };
+    
+    loadFavorites();
+    
+    // Listen for updates
+    window.addEventListener('favoritesUpdated', loadFavorites);
+    return () => window.removeEventListener('favoritesUpdated', loadFavorites);
+  }, []);
+
   // Update input when location is picked from map
   useEffect(() => {
     console.log('mapPickMode changed:', mapPickMode);
@@ -60,7 +76,8 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
 
   // Try to get current location on component mount
   useEffect(() => {
-    if (navigator.geolocation) {
+    const locationSharingEnabled = JSON.parse(localStorage.getItem('settings_locationSharing') || 'true');
+    if (navigator.geolocation && locationSharingEnabled) {
       setLoadingLocation(true);
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -226,6 +243,41 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
       return <MapPin size={16} className="text-emerald-400" />;
     }
     return <MapPin size={16} className="text-slate-400" />;
+  };
+
+  const getFavoriteIcon = (iconName) => {
+    const icons = {
+      home: <Home size={16} />,
+      work: <Briefcase size={16} />,
+      location: <MapPin size={16} />,
+    };
+    return icons[iconName] || <Heart size={16} />;
+  };
+
+  const saveFavorite = (coords) => {
+    const label = prompt('Enter a label for this location (e.g., Home, Work, Gym):');
+    if (label && label.trim()) {
+      const icon = favoritesManager.getSuggestedIcon(label);
+      favoritesManager.addFavorite(label.trim(), coords.name, coords.lat, coords.lon, icon);
+      soundManager.playSuccess();
+    }
+  };
+
+  const selectFavorite = (favorite, type) => {
+    const coords = { lat: favorite.lat, lon: favorite.lon, name: favorite.name };
+    
+    if (type === 'pickup') {
+      setPQuery(favorite.name);
+      window.tempPickup = coords;
+      setPResults([]);
+      setFocusedInput(null);
+    } else {
+      setDQuery(favorite.name);
+      window.tempDropoff = coords;
+      setDResults([]);
+      setFocusedInput(null);
+    }
+    soundManager.playClick();
   };
 
   const formatSuggestion = (feature) => {
@@ -421,14 +473,17 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
                   )}
                   {pResults.map((s, i) => {
                     const { mainText, subText } = formatSuggestion(s);
+                    const [lon, lat] = s.geometry.coordinates;
                     return (
                       <div 
                         key={i} 
-                        onClick={() => handleSelect(s, 'p')} 
                         className="p-4 hover:bg-slate-800/60 cursor-pointer flex items-start gap-3 border-b border-slate-800/30 last:border-0 transition-colors group"
                       >
                         <div className="mt-1">{getLocationIcon(s)}</div>
-                        <div className="flex-1 min-w-0">
+                        <div 
+                          onClick={() => handleSelect(s, 'p')}
+                          className="flex-1 min-w-0"
+                        >
                           <p className="text-sm font-semibold text-white truncate group-hover:text-emerald-400 transition-colors">
                             {mainText}
                           </p>
@@ -438,6 +493,16 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
                             </p>
                           )}
                         </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            saveFavorite({ lat, lon, name: mainText });
+                          }}
+                          className="p-2 hover:bg-yellow-500/20 rounded-full transition-colors group/star"
+                          title="Save to favorites"
+                        >
+                          <Star size={18} className="text-yellow-600 group-hover/star:text-yellow-400 group-hover/star:fill-yellow-400 transition-all" />
+                        </button>
                       </div>
                     );
                   })}
@@ -543,14 +608,17 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
                   )}
                   {dResults.map((s, i) => {
                     const { mainText, subText } = formatSuggestion(s);
+                    const [lon, lat] = s.geometry.coordinates;
                     return (
                       <div 
                         key={i} 
-                        onClick={() => handleSelect(s, 'd')} 
                         className="p-4 hover:bg-slate-800/60 cursor-pointer flex items-start gap-3 border-b border-slate-800/30 last:border-0 transition-colors group"
                       >
                         <div className="mt-1">{getLocationIcon(s)}</div>
-                        <div className="flex-1 min-w-0">
+                        <div 
+                          onClick={() => handleSelect(s, 'd')}
+                          className="flex-1 min-w-0"
+                        >
                           <p className="text-sm font-semibold text-white truncate group-hover:text-rose-400 transition-colors">
                             {mainText}
                           </p>
@@ -560,6 +628,16 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
                             </p>
                           )}
                         </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            saveFavorite({ lat, lon, name: mainText });
+                          }}
+                          className="p-2 hover:bg-yellow-500/20 rounded-full transition-colors group/star"
+                          title="Save to favorites"
+                        >
+                          <Star size={18} className="text-yellow-600 group-hover/star:text-yellow-400 group-hover/star:fill-yellow-400 transition-all" />
+                        </button>
                       </div>
                     );
                   })}
@@ -592,6 +670,71 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
         <Search size={18} /> 
         {pQuery && dQuery ? t('findRides') : t('enterLocations')}
       </button>
+
+      {/* Favorite Locations Section */}
+      <div className={`mt-6 rounded-2xl overflow-hidden border-2 ${
+        darkMode 
+          ? 'bg-[#0e1623] border-slate-800/50' 
+          : 'bg-white border-slate-200'
+      }`}>
+        <div className={`px-4 py-3 flex items-center justify-between ${
+          darkMode ? 'bg-slate-900/50 border-b border-slate-800/50' : 'bg-slate-50 border-b border-slate-200'
+        }`}>
+          <div className="flex items-center gap-2">
+            <Star size={16} className={darkMode ? 'text-yellow-500' : 'text-yellow-600'} fill="currentColor" />
+            <h3 className={`text-sm font-bold uppercase tracking-wider ${
+              darkMode ? 'text-slate-300' : 'text-slate-700'
+            }`}>
+              Favorite Locations
+            </h3>
+          </div>
+        </div>
+        
+        {favorites.length > 0 ? (
+          <div className="p-4 flex flex-wrap gap-2">
+            {favorites.map((fav, idx) => (
+              <div key={idx} className="relative group">
+                <button
+                  onClick={() => {
+                    // Show modal to choose pickup or dropoff
+                    const choice = window.confirm(`Use "${fav.label}" as pickup location?\n\nClick OK for Pickup, Cancel for Dropoff`);
+                    selectFavorite(fav, choice ? 'pickup' : 'dropoff');
+                  }}
+                  className={`px-4 py-2 rounded-xl font-semibold text-sm flex items-center gap-2 transition-all ${
+                    darkMode
+                      ? 'bg-slate-800 text-white hover:bg-slate-700 border border-slate-700'
+                      : 'bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-300'
+                  }`}
+                >
+                  <span className="text-yellow-500">{getFavoriteIcon(fav.icon)}</span>
+                  {fav.label}
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (window.confirm(`Remove "${fav.label}" from favorites?`)) {
+                      favoritesManager.removeFavorite(fav.label);
+                      soundManager.playClick();
+                    }
+                  }}
+                  className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                  title="Remove favorite"
+                >
+                  <X size={12} className="text-white" />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className={`p-6 text-center ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+            <Star size={32} className="mx-auto mb-2 opacity-30" />
+            <p className="text-sm font-semibold mb-1">No favorites yet</p>
+            <p className="text-xs opacity-70">
+              Click the <Star size={12} className="inline" /> icon next to any search result to save it as a favorite!
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* Recent Searches Section */}
       {recentSearches.length > 0 && (
