@@ -41,6 +41,9 @@ class _SearchScreenState extends State<SearchScreen> {
   Position? _currentLocation;
   String? _focusedInput; // 'pickup' or 'dropoff'
 
+  // Change to your laptop's IP for phone testing (find using: ipconfig)
+  // For web/emulator use: http://localhost:5000
+  // For phone use: http://192.168.x.x:5000 (your laptop's local IP)
   final String baseUrl = 'http://localhost:5000';
   final String bbox = '77.4601,12.8340,77.8170,13.1437'; // Bengaluru bounding box
 

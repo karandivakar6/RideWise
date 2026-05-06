@@ -319,34 +319,34 @@ app.post('/api/fares', async (req, res) => {
             {
                 category: "Cab Economy", icon: "🚗",
                 services: [
-                    { name: "Rapido", type: "Non-AC Cab", algorithm: "rapido", base: 50, perKm: 10, perMin: 1.2, brand: "bg-yellow-500" },
-                    { name: "Namma Yatri", type: "Non-AC Cab", algorithm: "nammayatri", base: 45, perKm: 12, perMin: 1.3, brand: "bg-green-600" },
-                    { name: "Uber", type: "Go Non-AC", algorithm: "uber", base: 45, perKm: 9, perMin: 1.2, brand: "bg-black" }
+                    { name: "Rapido", type: "Non-AC Cab", algorithm: "rapido", base: 70, perKm: 14, perMin: 2, brand: "bg-yellow-500" },
+                    { name: "Namma Yatri", type: "Non-AC Cab", algorithm: "nammayatri", base: 65, perKm: 16, perMin: 2.2, brand: "bg-green-600" },
+                    { name: "Uber", type: "Go Non-AC", algorithm: "uber", base: 68, perKm: 13.5, perMin: 2.1, brand: "bg-black" }
                 ]
             },
             {
                 category: "Cab AC", icon: "🚕",
                 services: [
-                    { name: "Rapido", type: "AC Cab", algorithm: "rapido", base: 62, perKm: 11.5, perMin: 1.4, brand: "bg-yellow-500" },
-                    { name: "Namma Yatri", type: "AC Cab", algorithm: "nammayatri", base: 58, perKm: 13.5, perMin: 1.5, brand: "bg-green-600" },
-                    { name: "Uber", type: "Go (AC)", algorithm: "uber", base: 55, perKm: 10.5, perMin: 1.3, brand: "bg-black" }
+                    { name: "Rapido", type: "AC Cab", algorithm: "rapido", base: 85, perKm: 15.5, perMin: 2.3, brand: "bg-yellow-500" },
+                    { name: "Namma Yatri", type: "AC Cab", algorithm: "nammayatri", base: 80, perKm: 17.5, perMin: 2.5, brand: "bg-green-600" },
+                    { name: "Uber", type: "Go (AC)", algorithm: "uber", base: 82, perKm: 15, perMin: 2.3, brand: "bg-black" }
                 ]
             },
             {
                 category: "Premium", icon: "✨",
                 services: [
-                    { name: "Rapido", type: "Cab Premium", algorithm: "rapido", base: 80, perKm: 13.5, perMin: 1.6, brand: "bg-yellow-500" },
-                    { name: "Namma Yatri", type: "Sedan Premium", algorithm: "nammayatri", base: 75, perKm: 16, perMin: 1.7, brand: "bg-green-600" },
-                    { name: "Uber", type: "Go Priority", algorithm: "uber", base: 78, perKm: 13.5, perMin: 1.5, brand: "bg-black" },
-                    { name: "Uber", type: "Premier", algorithm: "uber", base: 88, perKm: 15, perMin: 1.8, brand: "bg-black" }
+                    { name: "Rapido", type: "Cab Premium", algorithm: "rapido", base: 110, perKm: 18, perMin: 2.6, brand: "bg-yellow-500" },
+                    { name: "Namma Yatri", type: "Sedan Premium", algorithm: "nammayatri", base: 105, perKm: 21, perMin: 2.8, brand: "bg-green-600" },
+                    { name: "Uber", type: "Go Priority", algorithm: "uber", base: 108, perKm: 18, perMin: 2.5, brand: "bg-black" },
+                    { name: "Uber", type: "Premier", algorithm: "uber", base: 125, perKm: 20, perMin: 3, brand: "bg-black" }
                 ]
             },
             {
                 category: "XL / Large", icon: "🚙",
                 services: [
-                    { name: "Rapido", type: "XL Cab", algorithm: "rapido", base: 110, perKm: 18, perMin: 2, brand: "bg-yellow-500" },
-                    { name: "Namma Yatri", type: "XL Cab", algorithm: "nammayatri", base: 105, perKm: 21, perMin: 2.2, brand: "bg-green-600" },
-                    { name: "Uber", type: "UberXL", algorithm: "uber", base: 108, perKm: 19, perMin: 2.1, brand: "bg-black" }
+                    { name: "Rapido", type: "XL Cab", algorithm: "rapido", base: 145, perKm: 23, perMin: 3.2, brand: "bg-yellow-500" },
+                    { name: "Namma Yatri", type: "XL Cab", algorithm: "nammayatri", base: 140, perKm: 26, perMin: 3.5, brand: "bg-green-600" },
+                    { name: "Uber", type: "UberXL", algorithm: "uber", base: 148, perKm: 24, perMin: 3.3, brand: "bg-black" }
                 ]
             }
         ];

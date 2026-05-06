@@ -23,6 +23,9 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _showPassword = false;
   String _errorMessage = '';
 
+  // Change to your laptop's IP for phone testing (find using: ipconfig)
+  // For web/emulator use: http://localhost:5000
+  // For phone use: http://192.168.x.x:5000 (your laptop's local IP)
   final String baseUrl = 'http://localhost:5000';
 
   Future<void> _handleSubmit() async {
