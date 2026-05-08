@@ -4,8 +4,24 @@ import { X, Smartphone } from 'lucide-react';
 import { getTranslation } from '../utils/translations';
 import { formatPrice } from '../utils/currency';
 
-export default function QRModal({ service, onClose, darkMode, pickup, dropoff, language = 'en' }) {
+export default function QRModal({ service, onClose, darkMode, pickup, dropoff, language = 'en', user }) {
   const t = (key) => getTranslation(key, language);
+
+  const handleOpenApp = async () => {
+    // Track ride when user opens the provider's app
+    if (user && user.id) {
+      try {
+        await fetch(`http://localhost:5000/api/users/${user.id}/increment-ride`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ provider: service.name })
+        });
+        console.log(`🚗 Ride tracked for ${service.name}`);
+      } catch (err) {
+        console.error('Failed to track ride:', err);
+      }
+    }
+  };
   
   // Generate booking link for QR code (deep links with location data)
   const generateBookingLink = () => {
@@ -133,10 +149,11 @@ export default function QRModal({ service, onClose, darkMode, pickup, dropoff, l
         </div>
 
         {/* Open App Button */}
-        <a
-          href={buttonLink}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          onClick={() => {
+            handleOpenApp();
+            window.open(buttonLink, '_blank', 'noopener,noreferrer');
+          }}
           className={`block w-full py-3 sm:py-3.5 md:py-4 rounded-xl sm:rounded-2xl font-black uppercase text-sm sm:text-base text-center transition-all shadow-lg ${
             darkMode 
               ? 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white' 
@@ -144,7 +161,7 @@ export default function QRModal({ service, onClose, darkMode, pickup, dropoff, l
           }`}
         >
           {t('openApp')} {service.name}
-        </a>
+        </button>
 
         <p className={`text-center text-[9px] sm:text-[10px] mt-3 sm:mt-4 ${darkMode ? 'text-slate-600' : 'text-slate-500'}`}>
           {service.name === 'Rapido' 

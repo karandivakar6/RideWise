@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatPrice } from '../utils/currency';
 
 const ProviderLogo = ({ service }) => {
   const serviceLower = service.toLowerCase();
@@ -66,7 +67,7 @@ export default function RideCard({ service, price, time, type, color }) {
       
       <div className="text-right">
         <p className="text-2xl font-black text-white group-hover:text-blue-400 transition-colors">
-          ₹{price}
+          {formatPrice(price)}
         </p>
         <p className="text-[10px] text-slate-600 font-bold uppercase">Best Value</p>
       </div>

@@ -1,80 +1,78 @@
 // Recent Searches Manager for RideWise Flutter
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RecentSearchesManager {
-  static const String _key = 'recentSearches';
-  static const int _maxSearches = 3;
+  static const String _baseUrl = 'http://localhost:5000/api/users';
 
   /// Save a search to recent searches
   static Future<void> saveSearch(
+    String userId,
     String pickup,
     String dropoff, {
-    double? pickupLat,
-    double? pickupLon,
-    double? dropoffLat,
-    double? dropoffLon,
+    required double pickupLat,
+    required double pickupLon,
+    required double dropoffLat,
+    required double dropoffLon,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    
-    // Check if auto-save is enabled
-    final autoSave = prefs.getBool('settings_autoSave') ?? true;
-    if (!autoSave) return;
+    try {
+      // Check if auto-save is enabled
+      final prefs = await SharedPreferences.getInstance();
+      final autoSave = prefs.getBool('settings_autoSave') ?? true;
+      if (!autoSave) return;
 
-    // Get existing searches
-    final searches = await getSearches();
-
-    // Create new search object
-    final newSearch = {
-      'pickup': pickup,
-      'dropoff': dropoff,
-      'pickupLat': pickupLat?.toString() ?? '',
-      'pickupLon': pickupLon?.toString() ?? '',
-      'dropoffLat': dropoffLat?.toString() ?? '',
-      'dropoffLon': dropoffLon?.toString() ?? '',
-      'timestamp': DateTime.now().toIso8601String(),
-    };
-
-    // Remove if already exists (to avoid duplicates)
-    searches.removeWhere((search) => 
-      search['pickup'] == pickup && search['dropoff'] == dropoff
-    );
-
-    // Add to beginning
-    searches.insert(0, newSearch);
-
-    // Keep only last 3
-    if (searches.length > _maxSearches) {
-      searches.removeRange(_maxSearches, searches.length);
+      await http.post(
+        Uri.parse('$_baseUrl/$userId/recent-searches'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'pickup': {
+            'name': pickup,
+            'lat': pickupLat,
+            'lon': pickupLon,
+          },
+          'dropoff': {
+            'name': dropoff,
+            'lat': dropoffLat,
+            'lon': dropoffLon,
+          }
+        }),
+      );
+    } catch (e) {
+      print('Error saving recent search: $e');
     }
-
-    // Save back to storage
-    final encoded = searches.map((s) => json.encode(s)).toList();
-    await prefs.setStringList(_key, encoded);
   }
 
   /// Get recent searches
-  static Future<List<Map<String, dynamic>>> getSearches() async {
-    final prefs = await SharedPreferences.getInstance();
-    
-    // Check if auto-save is enabled
-    final autoSave = prefs.getBool('settings_autoSave') ?? true;
-    if (!autoSave) return [];
+  static Future<List<Map<String, dynamic>>> getSearches(String userId) async {
+    try {
+      // Check if auto-save is enabled
+      final prefs = await SharedPreferences.getInstance();
+      final autoSave = prefs.getBool('settings_autoSave') ?? true;
+      if (!autoSave) return [];
 
-    final encoded = prefs.getStringList(_key) ?? [];
-    
-    return encoded.map((s) {
-      final Map<String, dynamic> decoded = json.decode(s);
-      return {
-        'pickup': decoded['pickup'] as String? ?? '',
-        'dropoff': decoded['dropoff'] as String? ?? '',
-        'pickupLat': decoded['pickupLat'] as String? ?? '',
-        'pickupLon': decoded['pickupLon'] as String? ?? '',
-        'dropoffLat': decoded['dropoffLat'] as String? ?? '',
-        'dropoffLon': decoded['dropoffLon'] as String? ?? '',
-        'timestamp': decoded['timestamp'] as String? ?? '',
-      };
-    }).toList();
+      final response = await http.get(Uri.parse('$_baseUrl/$userId/recent-searches'));
+      
+      if (response.statusCode == 200) {
+        final List<dynamic> searches = json.decode(response.body);
+        return searches.map((s) {
+          final search = s as Map<String, dynamic>;
+          return {
+            'pickup': search['pickup']['name'] as String? ?? '',
+            'dropoff': search['dropoff']['name'] as String? ?? '',
+            'pickupLat': search['pickup']['lat']?.toString() ?? '',
+            'pickupLon': search['pickup']['lon']?.toString() ?? '',
+            'dropoffLat': search['dropoff']['lat']?.toString() ?? '',
+            'dropoffLon': search['dropoff']['lon']?.toString() ?? '',
+            'timestamp': search['timestamp'] as String? ?? '',
+          };
+        }).toList();
+      }
+      return [];
+    } catch (e) {
+      print('Error loading recent searches: $e');
+      return [];
+    }
   }
 
   /// Clear all recent searches

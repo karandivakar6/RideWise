@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../utils/currency.dart';
 
-class RideCard extends StatelessWidget {
+class RideCard extends StatefulWidget {
   final Map<String, dynamic> service;
   final String pickupAddress;
   final String dropoffAddress;
@@ -15,8 +19,32 @@ class RideCard extends StatelessWidget {
     required this.dropoffAddress,
   });
 
+  @override
+  State<RideCard> createState() => _RideCardState();
+}
+
+class _RideCardState extends State<RideCard> {
+  String _currency = 'INR';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrency();
+  }
+
+  Future<void> _loadCurrency() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _currency = prefs.getString('settings_currency') ?? 'INR';
+    });
+  }
+
+  String _formatPrice() {
+    return CurrencyConverter.convertPrice(widget.service['price'].toDouble(), _currency);
+  }
+
   Color _getBrandColor() {
-    final brand = service['brand'] as String;
+    final brand = widget.service['brand'] as String;
     if (brand.contains('yellow')) return Colors.yellow.shade700;
     if (brand.contains('green')) return Colors.green.shade600;
     if (brand.contains('black')) return Colors.black;
@@ -24,7 +52,7 @@ class RideCard extends StatelessWidget {
   }
 
   Widget _buildProviderLogo() {
-    final name = service['name'] as String;
+    final name = widget.service['name'] as String;
     
     if (name == 'Rapido') {
       return Container(
@@ -131,26 +159,30 @@ class RideCard extends StatelessWidget {
   }
 
   IconData _getProviderIcon() {
-    final name = service['name'] as String;
+    final name = widget.service['name'] as String;
     if (name == 'Rapido') return Icons.two_wheeler;
     if (name == 'Namma Yatri') return Icons.local_taxi;
     return Icons.directions_car;
   }
 
-  void _shareRide() {
+  Future<void> _shareRide() async {
+    final prefs = await SharedPreferences.getInstance();
+    final currency = prefs.getString('settings_currency') ?? 'INR';
+    final formattedPrice = CurrencyConverter.convertPrice(service['price'].toDouble(), currency);
+    
     final message = '''🚗 Check out this ride option!
 
-🚖 ${service['name']} - ${service['type']}
-💰 Price: ₹${service['price']}
+🚖 ${widget.service['name']} - ${widget.service['type']}
+💰 Price: $formattedPrice
 
-📍 From: $pickupAddress
-📍 To: $dropoffAddress
+📍 From: ${widget.pickupAddress}
+📍 To: ${widget.dropoffAddress}
 
 Found using RideWise - Compare. Save. Ride.''';
     
     Share.share(
       message,
-      subject: 'RideWise - ${service['name']} Ride',
+      subject: 'RideWise - ${widget.service['name']} Ride',
     );
   }
 
@@ -167,7 +199,7 @@ Found using RideWise - Compare. Save. Ride.''';
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '${service['name']} - ${service['type']}',
+              '${widget.service['name']} - ${widget.service['type']}',
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w900,
@@ -176,7 +208,7 @@ Found using RideWise - Compare. Save. Ride.''';
             ),
             const SizedBox(height: 8),
             Text(
-              '₹${service['price']}',
+              _formatPrice(),
               style: const TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.w900,
@@ -193,7 +225,7 @@ Found using RideWise - Compare. Save. Ride.''';
                 borderRadius: BorderRadius.circular(16),
               ),
               child: QrImageView(
-                data: 'ridewise://book?provider=${service['name']}&type=${service['type']}&price=${service['price']}',
+                data: 'ridewise://book?provider=${widget.service['name']}&type=${widget.service['type']}&price=${widget.service['price']}',
                 size: 200,
               ),
             ),
@@ -240,6 +272,25 @@ Found using RideWise - Compare. Save. Ride.''';
   }
 
   Future<void> _launchApp(String provider) async {
+    // Track ride when user opens the provider's app
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userJson = prefs.getString('user');
+      if (userJson != null) {
+        final user = json.decode(userJson);
+        final userId = user['id'];
+        
+        await http.post(
+          Uri.parse('http://localhost:5000/api/users/$userId/increment-ride'),
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode({'provider': provider}),
+        );
+        print('🚗 Ride tracked for $provider');
+      }
+    } catch (e) {
+      print('Failed to track ride: $e');
+    }
+    
     // Simplified - in production, use deep links
     final urls = {
       'Uber': 'https://m.uber.com',
@@ -281,7 +332,7 @@ Found using RideWise - Compare. Save. Ride.''';
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      service['name'],
+                      widget.service['name'],
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w900,
@@ -290,7 +341,7 @@ Found using RideWise - Compare. Save. Ride.''';
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      service['type'],
+                      widget.service['type'],
                       style: const TextStyle(
                         fontSize: 11,
                         color: Colors.grey,
@@ -303,7 +354,7 @@ Found using RideWise - Compare. Save. Ride.''';
                         const Icon(Icons.access_time, size: 12, color: Colors.grey),
                         const SizedBox(width: 4),
                         Text(
-                          service['estimatedTime'],
+                          widget.service['estimatedTime'],
                           style: const TextStyle(fontSize: 10, color: Colors.grey),
                         ),
                       ],
@@ -317,7 +368,7 @@ Found using RideWise - Compare. Save. Ride.''';
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '₹${service['price']}',
+                    _formatPrice(),
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w900,

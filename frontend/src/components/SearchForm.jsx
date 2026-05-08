@@ -4,7 +4,7 @@ import { soundManager } from '../utils/soundEffects';
 import { getTranslation } from '../utils/translations';
 import { favoritesManager } from '../utils/favoritesManager';
 
-export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, darkMode, language = 'en' }) {
+export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, darkMode, language = 'en', user }) {
   const t = (key) => getTranslation(key, language);
   const [pQuery, setPQuery] = useState('');
   const [dQuery, setDQuery] = useState('');
@@ -15,6 +15,7 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [recentSearches, setRecentSearches] = useState([]);
   const [favorites, setFavorites] = useState([]);
+  const [favoriteSelectionModal, setFavoriteSelectionModal] = useState(null); // For choosing pickup/dropoff
   
   // Refs for click-outside detection
   const pickupRef = useRef(null);
@@ -25,11 +26,21 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
 
   // Load recent searches
   useEffect(() => {
-    const loadRecentSearches = () => {
+    const loadRecentSearches = async () => {
       const autoSaveEnabled = JSON.parse(localStorage.getItem('settings_autoSave') || 'true');
-      if (autoSaveEnabled) {
-        const saved = JSON.parse(localStorage.getItem('recentSearches') || '[]');
-        setRecentSearches(saved);
+      if (autoSaveEnabled && user && user.id) {
+        try {
+          const response = await fetch(`http://localhost:5000/api/users/${user.id}/recent-searches`);
+          if (response.ok) {
+            const searches = await response.json();
+            setRecentSearches(searches);
+          } else {
+            setRecentSearches([]);
+          }
+        } catch (err) {
+          console.error('Failed to load recent searches:', err);
+          setRecentSearches([]);
+        }
       } else {
         setRecentSearches([]);
       }
@@ -40,13 +51,17 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
     // Listen for updates
     window.addEventListener('recentSearchesUpdated', loadRecentSearches);
     return () => window.removeEventListener('recentSearchesUpdated', loadRecentSearches);
-  }, []);
+  }, [user]);
 
   // Load favorites
   useEffect(() => {
-    const loadFavorites = () => {
-      const favs = favoritesManager.getFavorites();
-      setFavorites(favs);
+    const loadFavorites = async () => {
+      if (user && user.id) {
+        const favs = await favoritesManager.getFavorites(user.id);
+        setFavorites(favs);
+      } else {
+        setFavorites([]);
+      }
     };
     
     loadFavorites();
@@ -54,7 +69,7 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
     // Listen for updates
     window.addEventListener('favoritesUpdated', loadFavorites);
     return () => window.removeEventListener('favoritesUpdated', loadFavorites);
-  }, []);
+  }, [user]);
 
   // Update input when location is picked from map
   useEffect(() => {
@@ -254,12 +269,19 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
     return icons[iconName] || <Heart size={16} />;
   };
 
-  const saveFavorite = (coords) => {
+  const saveFavorite = async (coords) => {
+    if (!user || !user.id) {
+      alert('Please login to save favorites');
+      return;
+    }
+    
     const label = prompt('Enter a label for this location (e.g., Home, Work, Gym):');
     if (label && label.trim()) {
       const icon = favoritesManager.getSuggestedIcon(label);
-      favoritesManager.addFavorite(label.trim(), coords.name, coords.lat, coords.lon, icon);
-      soundManager.playSuccess();
+      const success = await favoritesManager.addFavorite(user.id, label.trim(), coords.name, coords.lat, coords.lon, icon);
+      if (success) {
+        soundManager.playSuccess();
+      }
     }
   };
 
@@ -697,8 +719,7 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
                 <button
                   onClick={() => {
                     // Show modal to choose pickup or dropoff
-                    const choice = window.confirm(`Use "${fav.label}" as pickup location?\n\nClick OK for Pickup, Cancel for Dropoff`);
-                    selectFavorite(fav, choice ? 'pickup' : 'dropoff');
+                    setFavoriteSelectionModal(fav);
                   }}
                   className={`px-4 py-2 rounded-xl font-semibold text-sm flex items-center gap-2 transition-all ${
                     darkMode
@@ -710,11 +731,14 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
                   {fav.label}
                 </button>
                 <button
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
                     if (window.confirm(`Remove "${fav.label}" from favorites?`)) {
-                      favoritesManager.removeFavorite(fav.label);
-                      soundManager.playClick();
+                      const index = favorites.findIndex(f => f.label === fav.label);
+                      if (index !== -1 && user && user.id) {
+                        await favoritesManager.removeFavorite(user.id, index);
+                        soundManager.playClick();
+                      }
                     }
                   }}
                   className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
@@ -808,6 +832,51 @@ export default function SearchForm({ onSearch, mapPickMode, setMapPickMode, dark
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Favorite Selection Modal */}
+      {favoriteSelectionModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setFavoriteSelectionModal(null)}>
+          <div 
+            className={`${darkMode ? 'bg-slate-800' : 'bg-white'} rounded-2xl p-6 max-w-sm w-full mx-4 shadow-xl`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className={`text-lg font-bold mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+              Use {favoriteSelectionModal.label} as
+            </h3>
+            <p className={`text-sm mb-6 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+              Select whether to use this location as your pickup or dropoff point
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  selectFavorite(favoriteSelectionModal, 'pickup');
+                  setFavoriteSelectionModal(null);
+                }}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2"
+              >
+                <MapPin size={18} />
+                Pickup
+              </button>
+              <button
+                onClick={() => {
+                  selectFavorite(favoriteSelectionModal, 'dropoff');
+                  setFavoriteSelectionModal(null);
+                }}
+                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2"
+              >
+                <MapPin size={18} />
+                Dropoff
+              </button>
+            </div>
+            <button
+              onClick={() => setFavoriteSelectionModal(null)}
+              className={`w-full mt-3 ${darkMode ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-slate-200 hover:bg-slate-300 text-slate-800'} font-semibold py-3 px-4 rounded-xl transition-colors`}
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}

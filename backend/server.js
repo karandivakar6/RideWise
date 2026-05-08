@@ -32,12 +32,15 @@ app.post('/api/auth/register', async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        user = new User({ name, email: email.toLowerCase(), password: hashedPassword });
+        // All registered users are regular users (not admin)
+        user = new User({ name, email: email.toLowerCase(), password: hashedPassword, isAdmin: false });
         await user.save();
+        console.log(`✅ New user registered: ${email} (isAdmin: false)`);
 
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        res.json({ token, user: { id: user._id, name, email, phone: '', photo: '' } });
+        res.json({ token, user: { id: user._id, name, email, phone: '', photo: '', isAdmin: false } });
     } catch (err) { 
+        console.error('❌ Registration failed:', err);
         res.status(500).json({ msg: "Registration failed" }); 
     }
 });
@@ -50,6 +53,29 @@ app.post('/api/auth/login', async (req, res) => {
         if (!email || !password) {
             console.log("❌ Login failed: Missing email or password");
             return res.status(400).json({ msg: "Please provide email and password" });
+        }
+
+        // Check for hardcoded admin credentials
+        if (email.toLowerCase() === 'admin@gmail.com' && password === 'Admin@1234') {
+            if (!process.env.JWT_SECRET) {
+                console.error('🚨 CRITICAL: JWT_SECRET is missing!');
+                return res.status(500).json({ msg: 'Server configuration error' });
+            }
+            const token = jwt.sign({ id: 'admin-hardcoded' }, process.env.JWT_SECRET, { expiresIn: '1h' });
+            console.log(`✅ Admin Logged In: ${email}`);
+            console.log('🔑 Admin token created with ID: admin-hardcoded');
+            return res.json({ 
+                token, 
+                user: { 
+                    id: 'admin-hardcoded', 
+                    name: 'Admin', 
+                    email: 'admin@gmail.com', 
+                    phone: '', 
+                    photo: '', 
+                    isAdmin: true, 
+                    rideCount: 0 
+                } 
+            });
         }
 
         const user = await User.findOne({ email: email.toLowerCase() });
@@ -72,12 +98,261 @@ app.post('/api/auth/login', async (req, res) => {
 
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
         console.log(`✅ User Logged In: ${user.email}`);
-        res.json({ token, user: { id: user._id, name: user.name, email: user.email, phone: user.phone, photo: user.photo } });
+        
+        // Ensure backward compatibility for old users without isAdmin/rideCount fields
+        const userResponse = {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone || '',
+            photo: user.photo || '',
+            isAdmin: false, // Regular users are never admin
+            rideCount: user.rideCount || 0
+        };
+        
+        res.json({ token, user: userResponse });
         
     } catch (err) { 
         // 3. Print the EXACT error to your backend terminal
         console.error("🔥 LOGIN CRASH:", err); 
         res.status(500).json({ msg: "Login server error" }); 
+    }
+});
+
+// --- USER FAVORITES ROUTES ---
+
+// Get user favorites
+app.get('/api/users/:userId/favorites', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.userId);
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+        res.json(user.favorites || []);
+    } catch (err) {
+        console.error('Error fetching favorites:', err);
+        res.status(500).json({ msg: 'Failed to fetch favorites' });
+    }
+});
+
+// Add favorite
+app.post('/api/users/:userId/favorites', async (req, res) => {
+    try {
+        const { label, name, lat, lon, icon } = req.body;
+        const user = await User.findById(req.params.userId);
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+        
+        // Check if favorite already exists
+        const exists = user.favorites.some(fav => 
+            fav.name === name && fav.lat === lat && fav.lon === lon
+        );
+        if (exists) {
+            return res.status(400).json({ msg: 'Favorite already exists' });
+        }
+        
+        user.favorites.push({ label, name, lat, lon, icon });
+        await user.save();
+        res.json(user.favorites);
+    } catch (err) {
+        console.error('Error adding favorite:', err);
+        res.status(500).json({ msg: 'Failed to add favorite' });
+    }
+});
+
+// Remove favorite
+app.delete('/api/users/:userId/favorites/:index', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.userId);
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+        
+        user.favorites.splice(parseInt(req.params.index), 1);
+        await user.save();
+        res.json(user.favorites);
+    } catch (err) {
+        console.error('Error removing favorite:', err);
+        res.status(500).json({ msg: 'Failed to remove favorite' });
+    }
+});
+
+// --- USER RECENT SEARCHES ROUTES ---
+
+// Get recent searches
+app.get('/api/users/:userId/recent-searches', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.userId);
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+        
+        // Return most recent first, limit to 10
+        const recentSearches = (user.recentSearches || [])
+            .sort((a, b) => b.timestamp - a.timestamp)
+            .slice(0, 10);
+        
+        res.json(recentSearches);
+    } catch (err) {
+        console.error('Error fetching recent searches:', err);
+        res.status(500).json({ msg: 'Failed to fetch recent searches' });
+    }
+});
+
+// Add recent search
+app.post('/api/users/:userId/recent-searches', async (req, res) => {
+    try {
+        const { pickup, dropoff } = req.body;
+        const user = await User.findById(req.params.userId);
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+        
+        // Remove duplicate if exists
+        user.recentSearches = user.recentSearches.filter(search => 
+            !(search.pickup.name === pickup.name && search.dropoff.name === dropoff.name)
+        );
+        
+        // Add new search at the beginning
+        user.recentSearches.unshift({ pickup, dropoff, timestamp: new Date() });
+        
+        // Keep only last 10 searches
+        user.recentSearches = user.recentSearches.slice(0, 10);
+        
+        await user.save();
+        res.json(user.recentSearches);
+    } catch (err) {
+        console.error('Error adding recent search:', err);
+        res.status(500).json({ msg: 'Failed to add recent search' });
+    }
+});
+
+// --- ADMIN ROUTES ---
+
+// Middleware to check if user is admin
+const requireAdmin = async (req, res, next) => {
+    try {
+        const token = req.header('Authorization')?.replace('Bearer ', '');
+        if (!token) {
+            console.log('❌ Admin auth failed: No token provided');
+            return res.status(401).json({ msg: 'No authentication token' });
+        }
+        
+        console.log('🔍 Verifying admin token...');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        console.log('✅ Token decoded:', decoded);
+        
+        // Check if it's the hardcoded admin
+        if (decoded.id === 'admin-hardcoded') {
+            console.log('✅ Hardcoded admin access granted');
+            req.user = { id: 'admin-hardcoded', isAdmin: true, name: 'Admin' };
+            return next();
+        }
+        
+        // Otherwise check database
+        const user = await User.findById(decoded.id);
+        
+        if (!user || !user.isAdmin) {
+            console.log('❌ Admin auth failed: User not admin or not found');
+            return res.status(403).json({ msg: 'Access denied. Admin only.' });
+        }
+        
+        console.log('✅ Database admin access granted');
+        req.user = user;
+        next();
+    } catch (err) {
+        console.error('❌ Admin auth error:', err.message);
+        res.status(401).json({ msg: 'Invalid token' });
+    }
+};
+
+// Get all users (admin only)
+app.get('/api/admin/users', requireAdmin, async (req, res) => {
+    try {
+        console.log('📋 Fetching all users from database...');
+        const users = await User.find({ isAdmin: false }).select('-password');
+        console.log(`✅ Found ${users.length} users:`, users.map(u => ({ email: u.email, isAdmin: u.isAdmin })));
+        res.json(users);
+    } catch (err) {
+        console.error('Error fetching users:', err);
+        res.status(500).json({ msg: 'Failed to fetch users' });
+    }
+});
+
+// Get all reports (admin only)
+app.get('/api/admin/reports', requireAdmin, async (req, res) => {
+    try {
+        const Report = require('./models/Report');
+        const reports = await Report.find().populate('userId', 'name email phone').sort({ createdAt: -1 });
+        res.json(reports);
+    } catch (err) {
+        console.error('Error fetching reports:', err);
+        res.status(500).json({ msg: 'Failed to fetch reports' });
+    }
+});
+
+// Update report status (admin only)
+app.patch('/api/admin/reports/:id', requireAdmin, async (req, res) => {
+    try {
+        const Report = require('./models/Report');
+        const { status } = req.body;
+        const report = await Report.findByIdAndUpdate(
+            req.params.id, 
+            { status, resolvedAt: status === 'resolved' ? new Date() : null },
+            { new: true }
+        ).populate('userId', 'name email phone');
+        res.json(report);
+    } catch (err) {
+        console.error('Error updating report:', err);
+        res.status(500).json({ msg: 'Failed to update report' });
+    }
+});
+
+// --- REPORT ROUTES ---
+
+// Submit a report
+app.post('/api/reports', async (req, res) => {
+    try {
+        const { userId, description } = req.body;
+        
+        if (!userId || !description) {
+            return res.status(400).json({ msg: 'User ID and description are required' });
+        }
+        
+        const Report = require('./models/Report');
+        const report = new Report({ userId, description });
+        await report.save();
+        
+        res.json({ msg: 'Report submitted successfully', report });
+    } catch (err) {
+        console.error('Error submitting report:', err);
+        res.status(500).json({ msg: 'Failed to submit report' });
+    }
+});
+
+// Increment ride count when user opens provider app
+app.post('/api/users/:userId/increment-ride', async (req, res) => {
+    try {
+        const { provider } = req.body;
+        const user = await User.findById(req.params.userId);
+        
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+        
+        user.rideCount = (user.rideCount || 0) + 1;
+        await user.save();
+        
+        console.log(`✅ Ride count incremented for ${user.email} -> ${user.rideCount} (Provider: ${provider})`);
+        
+        res.json({ 
+            msg: 'Ride count incremented', 
+            rideCount: user.rideCount 
+        });
+    } catch (err) {
+        console.error('Error incrementing ride count:', err);
+        res.status(500).json({ msg: 'Failed to increment ride count' });
     }
 });
 
@@ -311,42 +586,42 @@ app.post('/api/fares', async (req, res) => {
             {
                 category: "Auto", icon: "🛺",
                 services: [
-                    { name: "Rapido", type: "Auto", algorithm: "rapido", base: 38, perKm: 13, perMin: 1.2, brand: "bg-yellow-500" },
-                    { name: "Namma Yatri", type: "Auto", algorithm: "nammayatri", base: 28, perKm: 13.5, perMin: 1.3, brand: "bg-green-600" },
-                    { name: "Uber", type: "Auto", algorithm: "uber", base: 38, perKm: 12.5, perMin: 1.4, brand: "bg-black" }
+                    { name: "Rapido", type: "Auto", algorithm: "rapido", base: 40, perKm: 14, perMin: 1.3, brand: "bg-yellow-500" },
+                    { name: "Namma Yatri", type: "Auto", algorithm: "nammayatri", base: 30, perKm: 15, perMin: 1.4, brand: "bg-green-600" },
+                    { name: "Uber", type: "Auto", algorithm: "uber", base: 40, perKm: 13.5, perMin: 1.5, brand: "bg-black" }
                 ]
             },
             {
                 category: "Cab Economy", icon: "🚗",
                 services: [
-                    { name: "Rapido", type: "Non-AC Cab", algorithm: "rapido", base: 70, perKm: 14, perMin: 2, brand: "bg-yellow-500" },
-                    { name: "Namma Yatri", type: "Non-AC Cab", algorithm: "nammayatri", base: 65, perKm: 16, perMin: 2.2, brand: "bg-green-600" },
-                    { name: "Uber", type: "Go Non-AC", algorithm: "uber", base: 68, perKm: 13.5, perMin: 2.1, brand: "bg-black" }
+                    { name: "Rapido", type: "Non-AC Cab", algorithm: "rapido", base: 70, perKm: 15, perMin: 2, brand: "bg-yellow-500" },
+                    { name: "Namma Yatri", type: "Non-AC Cab", algorithm: "nammayatri", base: 65, perKm: 17, perMin: 2.2, brand: "bg-green-600" },
+                    { name: "Uber", type: "Go Non-AC", algorithm: "uber", base: 68, perKm: 14.5, perMin: 2.1, brand: "bg-black" }
                 ]
             },
             {
                 category: "Cab AC", icon: "🚕",
                 services: [
-                    { name: "Rapido", type: "AC Cab", algorithm: "rapido", base: 85, perKm: 15.5, perMin: 2.3, brand: "bg-yellow-500" },
-                    { name: "Namma Yatri", type: "AC Cab", algorithm: "nammayatri", base: 80, perKm: 17.5, perMin: 2.5, brand: "bg-green-600" },
-                    { name: "Uber", type: "Go (AC)", algorithm: "uber", base: 82, perKm: 15, perMin: 2.3, brand: "bg-black" }
+                    { name: "Rapido", type: "AC Cab", algorithm: "rapido", base: 85, perKm: 16.5, perMin: 2.3, brand: "bg-yellow-500" },
+                    { name: "Namma Yatri", type: "AC Cab", algorithm: "nammayatri", base: 80, perKm: 18.5, perMin: 2.5, brand: "bg-green-600" },
+                    { name: "Uber", type: "Go (AC)", algorithm: "uber", base: 82, perKm: 16, perMin: 2.3, brand: "bg-black" }
                 ]
             },
             {
                 category: "Premium", icon: "✨",
                 services: [
-                    { name: "Rapido", type: "Cab Premium", algorithm: "rapido", base: 110, perKm: 18, perMin: 2.6, brand: "bg-yellow-500" },
-                    { name: "Namma Yatri", type: "Sedan Premium", algorithm: "nammayatri", base: 105, perKm: 21, perMin: 2.8, brand: "bg-green-600" },
-                    { name: "Uber", type: "Go Priority", algorithm: "uber", base: 108, perKm: 18, perMin: 2.5, brand: "bg-black" },
-                    { name: "Uber", type: "Premier", algorithm: "uber", base: 125, perKm: 20, perMin: 3, brand: "bg-black" }
+                    { name: "Rapido", type: "Cab Premium", algorithm: "rapido", base: 110, perKm: 19, perMin: 2.6, brand: "bg-yellow-500" },
+                    { name: "Namma Yatri", type: "Sedan Premium", algorithm: "nammayatri", base: 105, perKm: 22, perMin: 2.8, brand: "bg-green-600" },
+                    { name: "Uber", type: "Go Priority", algorithm: "uber", base: 108, perKm: 19, perMin: 2.5, brand: "bg-black" },
+                    { name: "Uber", type: "Premier", algorithm: "uber", base: 125, perKm: 21, perMin: 3, brand: "bg-black" }
                 ]
             },
             {
                 category: "XL / Large", icon: "🚙",
                 services: [
-                    { name: "Rapido", type: "XL Cab", algorithm: "rapido", base: 145, perKm: 23, perMin: 3.2, brand: "bg-yellow-500" },
-                    { name: "Namma Yatri", type: "XL Cab", algorithm: "nammayatri", base: 140, perKm: 26, perMin: 3.5, brand: "bg-green-600" },
-                    { name: "Uber", type: "UberXL", algorithm: "uber", base: 148, perKm: 24, perMin: 3.3, brand: "bg-black" }
+                    { name: "Rapido", type: "XL Cab", algorithm: "rapido", base: 145, perKm: 24, perMin: 3.2, brand: "bg-yellow-500" },
+                    { name: "Namma Yatri", type: "XL Cab", algorithm: "nammayatri", base: 140, perKm: 27, perMin: 3.5, brand: "bg-green-600" },
+                    { name: "Uber", type: "UberXL", algorithm: "uber", base: 148, perKm: 25, perMin: 3.3, brand: "bg-black" }
                 ]
             }
         ];

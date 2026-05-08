@@ -102,7 +102,7 @@ export default function Auth({ onLoginSuccess }) {
         </button>
       </form>
 
-      <div className="mt-8 text-center">
+      <div className="mt-8 text-center space-y-3">
         <button 
           onClick={() => setIsLogin(!isLogin)}
           className="text-slate-500 text-[10px] font-black uppercase tracking-widest hover:text-blue-400 transition-colors"

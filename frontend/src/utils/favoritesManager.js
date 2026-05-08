@@ -1,15 +1,23 @@
 // Favorites Manager for RideWise Web App
 
-const FAVORITES_KEY = 'favoriteLocations';
+const API_URL = 'http://localhost:5000';
 
 export const favoritesManager = {
   /**
    * Get all favorite locations
    */
-  getFavorites() {
+  async getFavorites(userId) {
     try {
-      const saved = localStorage.getItem(FAVORITES_KEY);
-      return saved ? JSON.parse(saved) : [];
+      if (!userId) return [];
+      
+      const response = await fetch(`${API_URL}/api/users/${userId}/favorites`);
+      if (!response.ok) {
+        console.error('Failed to fetch favorites');
+        return [];
+      }
+      
+      const favorites = await response.json();
+      return favorites;
     } catch (error) {
       console.error('Error loading favorites:', error);
       return [];
@@ -19,24 +27,20 @@ export const favoritesManager = {
   /**
    * Add a favorite location
    */
-  addFavorite(label, name, lat, lon, icon = 'location') {
+  async addFavorite(userId, label, name, lat, lon, icon = 'location') {
     try {
-      const favorites = this.getFavorites();
+      if (!userId) return false;
       
-      // Check if label already exists
-      const existingIndex = favorites.findIndex(fav => fav.label === label);
+      const response = await fetch(`${API_URL}/api/users/${userId}/favorites`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label, name, lat, lon, icon })
+      });
       
-      const newFavorite = { label, name, lat, lon, icon };
-      
-      if (existingIndex >= 0) {
-        // Update existing favorite
-        favorites[existingIndex] = newFavorite;
-      } else {
-        // Add new favorite
-        favorites.push(newFavorite);
+      if (!response.ok) {
+        console.error('Failed to add favorite');
+        return false;
       }
-      
-      localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
       
       // Dispatch custom event to notify other components
       window.dispatchEvent(new CustomEvent('favoritesUpdated'));
@@ -51,12 +55,18 @@ export const favoritesManager = {
   /**
    * Remove a favorite location
    */
-  removeFavorite(label) {
+  async removeFavorite(userId, index) {
     try {
-      const favorites = this.getFavorites();
-      const filtered = favorites.filter(fav => fav.label !== label);
+      if (!userId) return false;
       
-      localStorage.setItem(FAVORITES_KEY, JSON.stringify(filtered));
+      const response = await fetch(`${API_URL}/api/users/${userId}/favorites/${index}`, {
+        method: 'DELETE'
+      });
+      
+      if (!response.ok) {
+        console.error('Failed to remove favorite');
+        return false;
+      }
       
       // Dispatch custom event to notify other components
       window.dispatchEvent(new CustomEvent('favoritesUpdated'));
@@ -71,16 +81,16 @@ export const favoritesManager = {
   /**
    * Get a specific favorite by label
    */
-  getFavoriteByLabel(label) {
-    const favorites = this.getFavorites();
+  async getFavoriteByLabel(userId, label) {
+    const favorites = await this.getFavorites(userId);
     return favorites.find(fav => fav.label === label);
   },
 
   /**
    * Check if a label exists
    */
-  hasLabel(label) {
-    const favorites = this.getFavorites();
+  async hasLabel(userId, label) {
+    const favorites = await this.getFavorites(userId);
     return favorites.some(fav => fav.label === label);
   },
 

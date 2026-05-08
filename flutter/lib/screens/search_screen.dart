@@ -37,6 +37,7 @@ class _SearchScreenState extends State<SearchScreen> {
   final _soundManager = SoundManager();
   String _errorMessage = '';
   Timer? _debounce;
+  String? _userId;
   
   Position? _currentLocation;
   String? _focusedInput; // 'pickup' or 'dropoff'
@@ -51,6 +52,7 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     super.initState();
     _currentLocation = widget.currentPosition;
+    _loadUserId();
     _loadRecentSearches();
     _loadFavorites();
     
@@ -75,18 +77,41 @@ class _SearchScreenState extends State<SearchScreen> {
     });
   }
   
+  Future<void> _loadUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userJson = prefs.getString('user');
+    if (userJson != null) {
+      final user = json.decode(userJson);
+      setState(() {
+        _userId = user['id'];
+      });
+    }
+  }
+  
   Future<void> _loadRecentSearches() async {
-    final searches = await RecentSearchesManager.getSearches();
-    setState(() {
-      _recentSearches = searches;
-    });
+    if (_userId == null) {
+      // Wait for userId to load
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+    if (_userId != null) {
+      final searches = await RecentSearchesManager.getSearches(_userId!);
+      setState(() {
+        _recentSearches = searches;
+      });
+    }
   }
 
   Future<void> _loadFavorites() async {
-    final favorites = await FavoritesManager.getFavorites();
-    setState(() {
-      _favorites = favorites;
-    });
+    if (_userId == null) {
+      // Wait for userId to load
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+    if (_userId != null) {
+      final favorites = await FavoritesManager.getFavorites(_userId!);
+      setState(() {
+        _favorites = favorites;
+      });
+    }
   }
 
   @override
@@ -256,8 +281,9 @@ class _SearchScreenState extends State<SearchScreen> {
       ),
     );
     
-    if (result != null && result.isNotEmpty) {
+    if (result != null && result.isNotEmpty && _userId != null) {
       await FavoritesManager.addFavorite(
+        userId: _userId!,
         label: result,
         name: locationData['name'],
         lat: locationData['lat'],
@@ -274,12 +300,17 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Future<void> _removeFavorite(String label) async {
-    await FavoritesManager.removeFavorite(label);
-    _loadFavorites();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Removed "$label" from favorites')),
-      );
+    if (_userId == null) return;
+    
+    final index = _favorites.indexWhere((fav) => fav['label'] == label);
+    if (index != -1) {
+      await FavoritesManager.removeFavorite(_userId!, index);
+      _loadFavorites();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Removed "$label" from favorites')),
+        );
+      }
     }
   }
 
@@ -413,6 +444,18 @@ class _SearchScreenState extends State<SearchScreen> {
       return;
     }
 
+    // Check if pickup and dropoff are the same location
+    final double latDiff = (_pickupCoords!['lat'] - _dropoffCoords!['lat']).abs();
+    final double lonDiff = (_pickupCoords!['lon'] - _dropoffCoords!['lon']).abs();
+    
+    if (latDiff < 0.001 && lonDiff < 0.001) {
+      setState(() {
+        _errorMessage = 'Pickup and dropoff locations cannot be the same. Please select different locations.';
+      });
+      _soundManager.playError();
+      return;
+    }
+
     _soundManager.playSearch();
     
     setState(() {
@@ -440,15 +483,18 @@ class _SearchScreenState extends State<SearchScreen> {
         final data = json.decode(response.body);
         
         // Save to recent searches with coordinates
-        await RecentSearchesManager.saveSearch(
-          _pickupCoords!['name'],
-          _dropoffCoords!['name'],
-          pickupLat: _pickupCoords!['lat'],
-          pickupLon: _pickupCoords!['lon'],
-          dropoffLat: _dropoffCoords!['lat'],
-          dropoffLon: _dropoffCoords!['lon'],
-        );
-        _loadRecentSearches();
+        if (_userId != null) {
+          await RecentSearchesManager.saveSearch(
+            _userId!,
+            _pickupCoords!['name'],
+            _dropoffCoords!['name'],
+            pickupLat: _pickupCoords!['lat'],
+            pickupLon: _pickupCoords!['lon'],
+            dropoffLat: _dropoffCoords!['lat'],
+            dropoffLon: _dropoffCoords!['lon'],
+          );
+          _loadRecentSearches();
+        }
         
         if (mounted) {
           _soundManager.playSuccess();

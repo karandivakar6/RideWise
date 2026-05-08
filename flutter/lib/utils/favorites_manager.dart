@@ -1,77 +1,72 @@
 // Favorites Manager for RideWise Flutter
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class FavoritesManager {
-  static const String _key = 'favoriteLocations';
+  static const String _baseUrl = 'http://localhost:5000/api/users';
 
   /// Get all favorite locations
-  static Future<List<Map<String, dynamic>>> getFavorites() async {
-    final prefs = await SharedPreferences.getInstance();
-    final encoded = prefs.getStringList(_key) ?? [];
-    
-    return encoded.map((s) {
-      final Map<String, dynamic> decoded = json.decode(s);
-      return {
-        'label': decoded['label'] as String,
-        'name': decoded['name'] as String,
-        'lat': decoded['lat'] as double,
-        'lon': decoded['lon'] as double,
-        'icon': decoded['icon'] as String? ?? 'location_on',
-      };
-    }).toList();
+  static Future<List<Map<String, dynamic>>> getFavorites(String userId) async {
+    try {
+      final response = await http.get(Uri.parse('$_baseUrl/$userId/favorites'));
+      
+      if (response.statusCode == 200) {
+        final List<dynamic> favorites = json.decode(response.body);
+        return favorites.map((f) => f as Map<String, dynamic>).toList();
+      }
+      return [];
+    } catch (e) {
+      print('Error loading favorites: $e');
+      return [];
+    }
   }
 
   /// Add a favorite location
-  static Future<void> addFavorite({
+  static Future<bool> addFavorite({
+    required String userId,
     required String label,
     required String name,
     required double lat,
     required double lon,
     String icon = 'location_on',
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final favorites = await getFavorites();
-
-    // Check if label already exists
-    final existingIndex = favorites.indexWhere((fav) => fav['label'] == label);
-    
-    final newFavorite = {
-      'label': label,
-      'name': name,
-      'lat': lat,
-      'lon': lon,
-      'icon': icon,
-    };
-
-    if (existingIndex >= 0) {
-      // Update existing favorite
-      favorites[existingIndex] = newFavorite;
-    } else {
-      // Add new favorite
-      favorites.add(newFavorite);
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/$userId/favorites'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'label': label,
+          'name': name,
+          'lat': lat,
+          'lon': lon,
+          'icon': icon,
+        }),
+      );
+      
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Error adding favorite: $e');
+      return false;
     }
-
-    // Save back to storage
-    final encoded = favorites.map((f) => json.encode(f)).toList();
-    await prefs.setStringList(_key, encoded);
   }
 
   /// Remove a favorite location
-  static Future<void> removeFavorite(String label) async {
-    final prefs = await SharedPreferences.getInstance();
-    final favorites = await getFavorites();
-
-    favorites.removeWhere((fav) => fav['label'] == label);
-
-    // Save back to storage
-    final encoded = favorites.map((f) => json.encode(f)).toList();
-    await prefs.setStringList(_key, encoded);
+  static Future<bool> removeFavorite(String userId, int index) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$_baseUrl/$userId/favorites/$index'),
+      );
+      
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Error removing favorite: $e');
+      return false;
+    }
   }
 
   /// Get a specific favorite by label
-  static Future<Map<String, dynamic>?> getFavoriteByLabel(String label) async {
-    final favorites = await getFavorites();
+  static Future<Map<String, dynamic>?> getFavoriteByLabel(String userId, String label) async {
+    final favorites = await getFavorites(userId);
     try {
       return favorites.firstWhere((fav) => fav['label'] == label);
     } catch (e) {
@@ -80,8 +75,8 @@ class FavoritesManager {
   }
 
   /// Check if a label exists
-  static Future<bool> hasLabel(String label) async {
-    final favorites = await getFavorites();
+  static Future<bool> hasLabel(String userId, String label) async {
+    final favorites = await getFavorites(userId);
     return favorites.any((fav) => fav['label'] == label);
   }
 

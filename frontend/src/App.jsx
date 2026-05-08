@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import SearchForm from './components/SearchForm';
 import MapView from './components/MapView';
 import Auth from './components/Auth';
+import AdminDashboard from './components/AdminDashboard';
 import ProfileModal from './components/ProfileModal';
 import SettingsModal from './components/SettingsModal';
 import QRModal from './components/QRModal';
+import ReportModal from './components/ReportModal';
 import Logo from './components/Logo';
 import RideCard from './components/RideCard';
-import { Settings, Info, Clock, Route, Moon, Sun, User, Share2 } from 'lucide-react';
+import { Settings, Info, Clock, Route, Moon, Sun, User, Share2, AlertCircle } from 'lucide-react';
 import { soundManager } from './utils/soundEffects';
 import { getTranslation } from './utils/translations';
 import { formatPrice } from './utils/currency';
@@ -23,6 +25,7 @@ function App() {
   const [showProfile, setShowProfile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
   const [language, setLanguage] = useState(() => {
     return localStorage.getItem('settings_language') || 'en';
@@ -52,6 +55,15 @@ function App() {
     const newMode = !darkMode;
     setDarkMode(newMode);
     localStorage.setItem('theme', newMode ? 'dark' : 'light');
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    setResults(null);
+    setPickup(null);
+    setDropoff(null);
   };
 
   const handleMapClick = async (lat, lon) => {
@@ -97,6 +109,17 @@ function App() {
   };
 
   const handleSearch = async (p, d) => {
+    // Check if pickup and dropoff are the same location
+    const latDiff = Math.abs(p.lat - d.lat);
+    const lonDiff = Math.abs(p.lon - d.lon);
+    
+    if (latDiff < 0.001 && lonDiff < 0.001) {
+      soundManager.playError();
+      alert('Pickup and dropoff locations cannot be the same. Please select different locations.');
+      setLoading(false);
+      return;
+    }
+    
     soundManager.playSearch();
     setLoading(true);
     setPickup(p); 
@@ -134,24 +157,23 @@ function App() {
     setLoading(false);
   };
 
-  const saveToRecentSearches = (pickup, dropoff) => {
+  const saveToRecentSearches = async (pickup, dropoff) => {
     try {
-      const recentSearches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
-      const newSearch = {
-        pickup: { name: pickup.name, lat: pickup.lat, lon: pickup.lon },
-        dropoff: { name: dropoff.name, lat: dropoff.lat, lon: dropoff.lon },
-        timestamp: new Date().toISOString()
-      };
+      if (!user || !user.id) return;
       
-      // Add to beginning and keep only last 10 searches
-      const updated = [newSearch, ...recentSearches.filter(s => 
-        s.pickup.name !== pickup.name || s.dropoff.name !== dropoff.name
-      )].slice(0, 10);
+      const response = await fetch(`http://localhost:5000/api/users/${user.id}/recent-searches`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pickup: { name: pickup.name, lat: pickup.lat, lon: pickup.lon },
+          dropoff: { name: dropoff.name, lat: dropoff.lat, lon: dropoff.lon }
+        })
+      });
       
-      localStorage.setItem('recentSearches', JSON.stringify(updated));
-      
-      // Trigger event to update UI
-      window.dispatchEvent(new Event('recentSearchesUpdated'));
+      if (response.ok) {
+        // Trigger event to update UI
+        window.dispatchEvent(new Event('recentSearchesUpdated'));
+      }
     } catch (err) {
       console.log('Failed to save recent search:', err);
     }
@@ -242,6 +264,8 @@ ${text}
         <div className="flex items-center justify-center min-h-screen px-4">
           <Auth onLoginSuccess={setUser} />
         </div>
+      ) : user.isAdmin ? (
+        <AdminDashboard user={user} onLogout={handleLogout} darkMode={darkMode} />
       ) : (
         <>
           <header className="px-6 pt-10 pb-4 max-w-3xl mx-auto relative">
@@ -309,6 +333,7 @@ ${text}
                 setMapPickMode={setMapPickMode}
                 darkMode={darkMode}
                 language={language}
+                user={user}
               />
             </div>
 
@@ -413,14 +438,24 @@ ${text}
           </main>
 
           {/* Bottom Nav */}
-          <nav className={`fixed bottom-0 left-0 right-0 backdrop-blur-xl border-t px-10 py-5 flex justify-center items-center z-[9999] ${
+          <nav className={`fixed bottom-0 left-0 right-0 backdrop-blur-xl border-t px-10 py-5 flex justify-center items-center gap-8 z-[9999] ${
             darkMode ? 'bg-[#0b1120]/95 border-slate-800/50' : 'bg-white/95 border-slate-200'
           }`}>
+            <button 
+              onClick={() => setShowReport(true)}
+              className={`transition-colors ${
+                darkMode ? 'text-slate-700 hover:text-orange-500' : 'text-slate-400 hover:text-orange-600'
+              }`}
+              title="Report Issue"
+            >
+              <AlertCircle size={20} />
+            </button>
             <button 
               onClick={() => setShowSettings(true)}
               className={`transition-colors ${
                 darkMode ? 'text-slate-700 hover:text-slate-400' : 'text-slate-400 hover:text-slate-700'
               }`}
+              title="Settings"
             >
               <Settings size={20} />
             </button>
@@ -444,6 +479,14 @@ ${text}
             />
           )}
           
+          {showReport && (
+            <ReportModal 
+              user={user}
+              onClose={() => setShowReport(false)} 
+              darkMode={darkMode}
+            />
+          )}
+          
           {/* QR Code Modal */}
           {showQR && selectedService && pickup && dropoff && (
             <QRModal 
@@ -453,6 +496,7 @@ ${text}
               darkMode={darkMode}
               onClose={() => setShowQR(false)}
               language={language}
+              user={user}
             />
           )}
         </>

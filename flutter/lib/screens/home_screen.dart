@@ -5,7 +5,9 @@ import 'package:permission_handler/permission_handler.dart';
 import 'dart:convert';
 import 'auth_screen.dart';
 import 'search_screen.dart';
+import 'admin_dashboard_screen.dart';
 import '../widgets/settings_modal.dart';
+import '../widgets/report_modal.dart';
 import '../widgets/logo.dart';
 import '../main.dart';
 
@@ -32,8 +34,20 @@ class _HomeScreenState extends State<HomeScreen> {
     final prefs = await SharedPreferences.getInstance();
     final userStr = prefs.getString('user');
     if (userStr != null) {
+      final user = json.decode(userStr);
+      
+      // Check if user is admin and navigate to admin dashboard
+      if (user['isAdmin'] == true && mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => AdminDashboardScreen(user: user),
+          ),
+        );
+        return;
+      }
+      
       setState(() {
-        _user = json.decode(userStr);
+        _user = user;
       });
     }
   }
@@ -138,6 +152,17 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         onPressed: () {
                           RideWiseApp.of(context)?.toggleTheme();
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.bug_report, color: Colors.orange),
+                        onPressed: () {
+                          showModalBottomSheet(
+                            context: context,
+                            backgroundColor: Colors.transparent,
+                            isScrollControlled: true,
+                            builder: (_) => ReportModal(userId: _user?['id'] ?? ''),
+                          );
                         },
                       ),
                       IconButton(
