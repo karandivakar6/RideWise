@@ -1,0 +1,6 @@
+<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Uber placeholder - Black/White theme -->
+  <rect width="200" height="200" fill="#000000" rx="20"/>
+  <text x="100" y="120" font-family="Arial, sans-serif" font-size="60" font-weight="bold" fill="#FFF" text-anchor="middle">U</text>
+  <text x="100" y="160" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#FFF" text-anchor="middle">UBER</text>
+</svg>

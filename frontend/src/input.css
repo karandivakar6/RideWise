@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+/* Minimal fallback just in case Tailwind isn't compiling yet */
+:root {
+  background-color: #020617;
+}

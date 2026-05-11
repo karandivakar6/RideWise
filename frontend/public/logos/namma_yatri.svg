@@ -1,0 +1,6 @@
+<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Namma Yatri placeholder - Purple/Blue theme -->
+  <rect width="200" height="200" fill="#7C3AED" rx="20"/>
+  <text x="100" y="115" font-family="Arial, sans-serif" font-size="50" font-weight="bold" fill="#FFF" text-anchor="middle">NY</text>
+  <text x="100" y="155" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#FFF" text-anchor="middle">NAMMA YATRI</text>
+</svg>
