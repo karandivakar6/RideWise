@@ -413,21 +413,27 @@ ${text}
                       <span className="text-[9px] text-green-500 font-bold ml-auto uppercase tracking-tighter">{t('verifiedPrices')}</span>
                     </div>
                     <div className="p-4 space-y-3">
-                      {cat.services.map((s, idx) => (
-                        <div 
-                          key={idx}
-                          onClick={() => handleServiceClick(s)}
-                          className="cursor-pointer"
-                        >
-                          <RideCard
-                            service={s.name}
-                            price={s.price}
-                            time={s.estimatedTime ? s.estimatedTime.replace(/\D/g, '') : '5'}
-                            type={s.type}
-                            color={s.brand}
-                          />
-                        </div>
-                      ))}
+                      {(() => {
+                        // Cheapest price within this category (Bike / Auto / Cab / ...).
+                        // Only that option is the "Best Value" for the category.
+                        const minPrice = Math.min(...cat.services.map(x => x.price));
+                        return cat.services.map((s, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => handleServiceClick(s)}
+                            className="cursor-pointer"
+                          >
+                            <RideCard
+                              service={s.name}
+                              price={s.price}
+                              time={s.estimatedTime ? s.estimatedTime.replace(/\D/g, '') : '5'}
+                              type={s.type}
+                              color={s.brand}
+                              isBestValue={s.price === minPrice}
+                            />
+                          </div>
+                        ));
+                      })()}
                     </div>
                   </div>
                 ))}

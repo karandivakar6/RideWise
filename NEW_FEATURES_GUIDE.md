@@ -14,21 +14,13 @@ Save your frequently visited locations (Home, Work, Gym, etc.) for quick access!
 3. **Click the star** and enter a label (e.g., "Home", "Work", "Gym")
 4. The location is now saved!
 
-#### Mobile App:
-1. **Search for a location** in either field
-2. **Tap the star icon (⭐)** next to any search result
-3. **Enter a label** when prompted
-4. Done! Your favorite is saved.
-
 ### How to Use Favorites:
 
-- **Web**: Click on a favorite chip and choose "Pickup" or "Dropoff"
-- **Mobile**: Tap a favorite chip and select whether to use it as pickup or dropoff
+- Click on a favorite chip and choose "Pickup" or "Dropoff"
 
 ### How to Remove Favorites:
 
-- **Web**: Hover over a favorite and click the ❌ that appears
-- **Mobile**: Long-press a favorite and confirm removal
+- Hover over a favorite and click the ❌ that appears
 
 ### Tips:
 - Use descriptive labels: "Home", "Office", "Mom's House", "Gym", etc.
@@ -43,16 +35,13 @@ Real provider logos now appear on ride cards instead of generic icons!
 
 ### Current Status:
 
-**Web App**: ✅ Placeholder logos are working!
+✅ Placeholder logos are working!
 - Rapido: Yellow badge with "R"
 - Uber: Black badge with "U"  
 - Namma Yatri: Purple badge with "NY"
 
-**Mobile App**: Icons will show until you add logo files
-
 ### How to Add Real Logos:
 
-#### For Web App:
 Logo files are located in: `frontend/public/logos/`
 
 To replace placeholders:
@@ -61,15 +50,6 @@ To replace placeholders:
 3. Name them: `rapido.svg`, `uber.svg`, `namma_yatri.svg`
 4. Place in `frontend/public/logos/` directory
 5. Refresh browser - done!
-
-#### For Mobile App:
-Logo files go in: `flutter/assets/images/logos/`
-
-To add logos:
-1. Download official logos as PNG files
-2. Save as: `rapido.png`, `uber.png`, `namma_yatri.png`
-3. Place in `flutter/assets/images/logos/` directory
-4. Run `flutter clean` and rebuild app
 
 ### Where to Get Logos:
 
@@ -93,10 +73,9 @@ Or search "[Provider Name] logo PNG transparent" on Google Images.
 - Larger now (18px) and easier to click
 
 ### "Logos aren't showing"
-- **Web**: Check `frontend/public/logos/` for SVG files
-- **Mobile**: Check `flutter/assets/images/logos/` for PNG files  
+- Check `frontend/public/logos/` for SVG files
 - Make sure files are named exactly: `rapido.svg`, `uber.svg`, `namma_yatri.svg`
-- Web app has working placeholder logos!
+- The app has working placeholder logos!
 
 ### "How do I search for locations?"
 1. Click in the pickup or dropoff field

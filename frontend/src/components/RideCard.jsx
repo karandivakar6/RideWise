@@ -37,7 +37,7 @@ const ProviderLogo = ({ service }) => {
   return null;
 };
 
-export default function RideCard({ service, price, time, type, color }) {
+export default function RideCard({ service, price, time, type, color, isBestValue = false }) {
   const hasLogo = ['rapido', 'namma yatri', 'uber'].includes(service.toLowerCase());
   
   return (
@@ -69,7 +69,9 @@ export default function RideCard({ service, price, time, type, color }) {
         <p className="text-2xl font-black text-white group-hover:text-blue-400 transition-colors">
           {formatPrice(price)}
         </p>
-        <p className="text-[10px] text-slate-600 font-bold uppercase">Best Value</p>
+        {isBestValue && (
+          <p className="text-[10px] text-green-400 font-bold uppercase tracking-wide">Best Value</p>
+        )}
       </div>
     </div>
   );
